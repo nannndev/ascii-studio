@@ -1,0 +1,2681 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Studio Pro — HD Photo, Video, Paint & Animation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(113, 113, 122, 0.35); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.65); }
+
+        /* CRT Scanline Overlay */
+        .crt-overlay {
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%,
+                rgba(0, 0, 0, 0.28) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.03),
+                rgba(0, 255, 0, 0.015),
+                rgba(0, 0, 255, 0.03)
+            );
+            background-size: 100% 3px, 6px 100%;
+        }
+
+        /* ASCII Pre rendering */
+        #asciiOutput {
+            line-height: 1.05;
+            letter-spacing: 0px;
+            white-space: pre;
+            font-variant-ligatures: none;
+            user-select: text;
+        }
+        #asciiOutput.paint-cursor {
+            cursor: crosshair;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans antialiased min-h-screen md:h-screen md:overflow-hidden flex flex-col">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-30 h-16 shrink-0 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md px-4 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-mono font-bold text-sm shadow-md shadow-indigo-500/20 shrink-0">
+                @#
+            </div>
+            <div class="min-w-0">
+                <h1 class="text-sm sm:text-base font-bold tracking-tight truncate">ASCII Studio <span class="text-indigo-500">Pro</span></h1>
+                <p class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate hidden sm:block">HD Photo • Video • Webcam • Paint • GIF/SVG</p>
+            </div>
+        </div>
+
+        <!-- Mode Switcher Tabs -->
+        <nav class="flex items-center bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-x-auto max-w-full">
+            <button type="button" data-mode="image" class="mode-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white shadow-sm whitespace-nowrap">Image</button>
+            <button type="button" data-mode="text" class="mode-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white whitespace-nowrap">Text</button>
+            <button type="button" data-mode="animate" class="mode-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white whitespace-nowrap">Animate</button>
+            <button type="button" data-mode="camera" class="mode-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white whitespace-nowrap">Webcam</button>
+            <button type="button" data-mode="paint" class="mode-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white whitespace-nowrap">Paint</button>
+        </nav>
+
+        <!-- Theme Toggle -->
+        <button id="themeToggleBtn" type="button" title="Toggle Dark/Light Theme"
+            class="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:border-indigo-500 transition-colors shrink-0">
+            <svg id="sunIcon" class="w-4 h-4 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+            <svg id="moonIcon" class="w-4 h-4 block dark:hidden text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+    </header>
+
+    <!-- MAIN FULL-WIDTH STUDIO LAYOUT -->
+    <main class="flex-1 flex flex-col md:flex-row min-h-0 overflow-visible md:overflow-hidden">
+
+        <!-- LEFT SIDEBAR: SCROLLABLE CONTROLS -->
+        <aside id="leftSidebar" class="order-2 md:order-1 w-full md:w-[350px] lg:w-[385px] shrink-0 md:h-full md:overflow-y-auto border-t md:border-t-0 md:border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950 p-3.5 space-y-3.5">
+
+            <!-- CARD 1: SOURCE PANEL (CHANGES PER MODE) -->
+            <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 id="sourcePanelTitle" class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Source Image</h2>
+                    <span id="sourceBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">READY</span>
+                </div>
+
+                <!-- MODE: IMAGE -->
+                <div id="panelImage" class="space-y-3">
+                    <div id="dropZone" class="border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-indigo-500 dark:hover:border-indigo-500 rounded-xl p-4 text-center cursor-pointer transition-colors bg-zinc-50/60 dark:bg-zinc-950/60">
+                        <input id="imageFileInput" type="file" accept="image/*" class="hidden">
+                        <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200">Drop photo here or click to upload</p>
+                        <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">PNG, JPG, WebP, GIF</p>
+                    </div>
+
+                    <!-- Built-in Procedural Sample Artworks -->
+                    <div>
+                        <p class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Sample Artworks:</p>
+                        <div class="grid grid-cols-4 gap-1.5">
+                            <button type="button" data-sample="sphere" class="sample-btn py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">Sphere</button>
+                            <button type="button" data-sample="sunset" class="sample-btn py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">Sunset</button>
+                            <button type="button" data-sample="wave" class="sample-btn py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">Waves</button>
+                            <button type="button" data-sample="portrait" class="sample-btn py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">Cyber</button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Image Transform Tools -->
+                    <div class="pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                        <p class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Quick Transform:</p>
+                        <div class="grid grid-cols-4 gap-1.5">
+                            <button id="flipHBtn" type="button" title="Flip Horizontal" class="py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">Flip H</button>
+                            <button id="flipVBtn" type="button" title="Flip Vertical" class="py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">Flip V</button>
+                            <button id="rotateCwBtn" type="button" title="Rotate 90° Clockwise" class="py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">Rot 90°</button>
+                            <button id="cropSquareBtn" type="button" title="Center Square 1:1 Crop" class="py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">1:1 Crop</button>
+                        </div>
+                    </div>
+
+                    <!-- 1-Click Photo Detail Presets -->
+                    <div class="pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <p class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">Mode Detail Foto (1-Click):</p>
+                            <span class="text-[10px] font-mono text-zinc-400">Auto-Fit</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button type="button" data-photo-preset="photo_hd" class="photo-preset-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold border border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/20 transition-colors">HD ASCII</button>
+                            <button type="button" data-photo-preset="braille_hd" class="photo-preset-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors">Braille 2×4</button>
+                            <button type="button" data-photo-preset="halfblock_hd" class="photo-preset-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold border border-violet-500/40 bg-violet-500/10 text-violet-600 dark:text-violet-300 hover:bg-violet-500/20 transition-colors">Photo HD ▀</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODE: TEXT BANNER -->
+                <div id="panelText" class="hidden space-y-3">
+                    <div>
+                        <label for="bannerTextInput" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">Banner Text</label>
+                        <input id="bannerTextInput" type="text" value="ASCII PRO" maxlength="24"
+                            class="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label for="bannerFontSelect" class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">Typography</label>
+                            <select id="bannerFontSelect" class="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="900 110px Impact, sans-serif">Impact Bold</option>
+                                <option value="900 100px Inter, sans-serif">Modern Sans</option>
+                                <option value="700 95px Georgia, serif">Classic Serif</option>
+                                <option value="700 90px 'JetBrains Mono', monospace">Tech Mono</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="bannerStyleSelect" class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">Fill Style</label>
+                            <select id="bannerStyleSelect" class="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="solid">Solid Fill</option>
+                                <option value="outline">Outline</option>
+                                <option value="shadow">Drop Shadow</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODE: ANIMATE / VIDEO -->
+                <div id="panelAnimate" class="hidden space-y-3">
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button type="button" data-anim="orbit" class="anim-preset-btn py-1.5 px-2 rounded-lg text-[11px] font-medium border border-indigo-500 bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">3D Orbit</button>
+                        <button type="button" data-anim="plasma" class="anim-preset-btn py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70">Plasma</button>
+                        <button type="button" data-anim="rain" class="anim-preset-btn py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70">Matrix</button>
+                        <button type="button" data-anim="radar" class="anim-preset-btn py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70">Radar</button>
+                        <button type="button" data-anim="bars" class="anim-preset-btn py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70">Equalizer</button>
+                        <button type="button" data-anim="cube" class="anim-preset-btn py-1.5 px-2 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70">3D Cube</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="animPlayPauseBtn" type="button" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Pause Animation</button>
+                        <label for="videoFileInput" class="py-2 px-3 rounded-xl text-xs font-semibold border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 hover:border-indigo-500 cursor-pointer transition-colors">Upload Video</label>
+                        <input id="videoFileInput" type="file" accept="video/*" class="hidden">
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <label for="fpsSlider" class="font-medium text-zinc-600 dark:text-zinc-400">Playback FPS</label>
+                            <span id="fpsValue" class="font-mono font-semibold">20 FPS</span>
+                        </div>
+                        <input id="fpsSlider" type="range" min="8" max="30" value="20" step="2" class="w-full accent-indigo-600 cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- MODE: WEBCAM -->
+                <div id="panelCamera" class="hidden space-y-3">
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400">Stream live camera feed directly into ASCII art.</p>
+                    <div class="flex gap-2">
+                        <button id="camToggleBtn" type="button" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">Start Camera</button>
+                        <button id="camFreezeBtn" type="button" class="py-2 px-3 rounded-xl text-xs font-semibold border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 hover:border-indigo-500 transition-colors">Freeze</button>
+                    </div>
+                    <label class="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 cursor-pointer">
+                        <input id="camMirrorToggle" type="checkbox" checked class="rounded accent-indigo-600">
+                        Mirror Camera Horizontally
+                    </label>
+                </div>
+
+                <!-- MODE: ASCII PAINT -->
+                <div id="panelPaint" class="hidden space-y-3">
+                    <div class="grid grid-cols-5 gap-1">
+                        <button type="button" data-tool="brush" class="paint-tool-btn py-1.5 rounded-lg text-[11px] font-semibold bg-indigo-600 text-white">Brush</button>
+                        <button type="button" data-tool="eraser" class="paint-tool-btn py-1.5 rounded-lg text-[11px] font-semibold border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800">Erase</button>
+                        <button type="button" data-tool="line" class="paint-tool-btn py-1.5 rounded-lg text-[11px] font-semibold border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800">Line</button>
+                        <button type="button" data-tool="box" class="paint-tool-btn py-1.5 rounded-lg text-[11px] font-semibold border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800">Box</button>
+                        <button type="button" data-tool="fill" class="paint-tool-btn py-1.5 rounded-lg text-[11px] font-semibold border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800">Fill</button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label for="paintCharInput" class="block text-[11px] text-zinc-500 mb-1">Char</label>
+                            <input id="paintCharInput" type="text" value="#" maxlength="1" class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2 py-1.5 text-center font-mono text-sm">
+                        </div>
+                        <div>
+                            <label for="paintSizeSelect" class="block text-[11px] text-zinc-500 mb-1">Size</label>
+                            <select id="paintSizeSelect" class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2 py-1.5 text-xs">
+                                <option value="1">1×1</option>
+                                <option value="2">2×2</option>
+                                <option value="3">3×3</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="paintColorInput" class="block text-[11px] text-zinc-500 mb-1">Color</label>
+                            <input id="paintColorInput" type="color" value="#38bdf8" class="w-full h-[34px] rounded-lg border border-zinc-200 dark:border-zinc-700 bg-transparent cursor-pointer">
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" class="quick-char-btn px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-xs hover:bg-indigo-500 hover:text-white">@</button>
+                        <button type="button" class="quick-char-btn px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-xs hover:bg-indigo-500 hover:text-white">#</button>
+                        <button type="button" class="quick-char-btn px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-xs hover:bg-indigo-500 hover:text-white">*</button>
+                        <button type="button" class="quick-char-btn px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-xs hover:bg-indigo-500 hover:text-white">+</button>
+                        <button type="button" class="quick-char-btn px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-xs hover:bg-indigo-500 hover:text-white">█</button>
+                        <button type="button" class="quick-char-btn px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-xs hover:bg-indigo-500 hover:text-white">▓</button>
+                        <button type="button" class="quick-char-btn px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-xs hover:bg-indigo-500 hover:text-white">░</button>
+                        <button type="button" class="quick-char-btn px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-xs hover:bg-indigo-500 hover:text-white">/</button>
+                        <button type="button" class="quick-char-btn px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-xs hover:bg-indigo-500 hover:text-white">\</button>
+                    </div>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button id="paintUndoBtn" type="button" class="py-1.5 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500">Undo</button>
+                        <button id="paintRedoBtn" type="button" class="py-1.5 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500">Redo</button>
+                        <button id="paintClearBtn" type="button" class="py-1.5 rounded-lg text-[11px] font-medium border border-rose-500/40 text-rose-500 hover:bg-rose-500/10">Clear</button>
+                        <button id="paintImportBtn" type="button" title="Import current ASCII into paint canvas" class="py-1.5 rounded-lg text-[11px] font-semibold bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-500/25">Import</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CARD 2: ASCII SETTINGS & HD PHOTO ENGINE -->
+            <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">ASCII Settings</h2>
+                    <button id="resetSettingsBtn" type="button" class="text-[11px] font-medium text-zinc-500 hover:text-indigo-500 transition-colors">Reset All</button>
+                </div>
+
+                <!-- Render Detail Engine -->
+                <div class="space-y-1.5">
+                    <label for="detailModeSelect" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Render Detail Engine</label>
+                    <select id="detailModeSelect" class="w-full rounded-xl border border-indigo-500/40 bg-indigo-500/5 dark:bg-zinc-950 px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="standard">Standard ASCII (Classic)</option>
+                        <option value="photo_hd">HD Photo ASCII (70-Char + F-S Dither)</option>
+                        <option value="braille_hd">Ultra Braille 2×4 (8× Sub-Pixel Detail)</option>
+                        <option value="halfblock_hd">True-Color Half-Block ▀ (2× Photo HD)</option>
+                    </select>
+                </div>
+
+                <!-- Character Palette -->
+                <div class="space-y-1.5">
+                    <label for="charsetPreset" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Character Ramp</label>
+                    <select id="charsetPreset" class="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="standard">Standard (@%#*+=-:. )</option>
+                        <option value="detailed">Detailed 70-Char ($@B%8&WM#...)</option>
+                        <option value="blocks">Unicode Blocks (█▓▒░ )</option>
+                        <option value="minimal">Minimal (#+:. )</option>
+                        <option value="binary">Binary (10 )</option>
+                        <option value="braille">Braille Density (⣿⣷⣶⣦⣤⣄⣀⠀)</option>
+                        <option value="matrix">Matrix Katakana (ｦｱｳｴｵｶｷｸｹｺ )</option>
+                        <option value="custom">Custom Characters...</option>
+                    </select>
+                    <input id="customCharsetInput" type="text" value="@#S%?*+;:,. " placeholder="Dark to light characters"
+                        class="hidden w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-1.5 text-xs font-mono">
+                </div>
+
+                <!-- Resolution + Quick Presets -->
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <label for="widthSlider" class="font-medium text-zinc-600 dark:text-zinc-400">Resolution (Columns)</label>
+                        <span id="widthValue" class="font-mono font-semibold">90</span>
+                    </div>
+                    <input id="widthSlider" type="range" min="24" max="260" value="90" step="2" class="w-full accent-indigo-600 cursor-pointer">
+                    <div class="grid grid-cols-5 gap-1.5">
+                        <button type="button" data-width="36" class="width-preset-btn py-1.5 px-1 rounded-lg leading-tight text-center font-mono border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">
+                            <span class="block text-[10px] font-semibold">WA</span>
+                            <span class="block text-[9px] opacity-75">36</span>
+                        </button>
+                        <button type="button" data-width="56" class="width-preset-btn py-1.5 px-1 rounded-lg leading-tight text-center font-mono border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">
+                            <span class="block text-[10px] font-semibold">Chat</span>
+                            <span class="block text-[9px] opacity-75">56</span>
+                        </button>
+                        <button type="button" data-width="90" class="width-preset-btn py-1.5 px-1 rounded-lg leading-tight text-center font-mono border border-indigo-500 bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 transition-colors">
+                            <span class="block text-[10px] font-semibold">Std</span>
+                            <span class="block text-[9px] opacity-75">90</span>
+                        </button>
+                        <button type="button" data-width="150" class="width-preset-btn py-1.5 px-1 rounded-lg leading-tight text-center font-mono border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">
+                            <span class="block text-[10px] font-semibold">HD</span>
+                            <span class="block text-[9px] opacity-75">150</span>
+                        </button>
+                        <button type="button" data-width="220" class="width-preset-btn py-1.5 px-1 rounded-lg leading-tight text-center font-mono border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 hover:border-indigo-500 transition-colors">
+                            <span class="block text-[10px] font-semibold">4K</span>
+                            <span class="block text-[9px] opacity-75">220</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sliders: Aspect, Contrast, Brightness, Sharpen -->
+                <div class="space-y-3">
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <label for="aspectSlider" class="font-medium text-zinc-600 dark:text-zinc-400">Aspect Ratio</label>
+                            <span id="aspectValue" class="font-mono font-semibold">0.50</span>
+                        </div>
+                        <input id="aspectSlider" type="range" min="0.30" max="0.80" value="0.50" step="0.02" class="w-full accent-indigo-600 cursor-pointer">
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <label for="contrastSlider" class="font-medium text-zinc-600 dark:text-zinc-400">Contrast</label>
+                            <span id="contrastValue" class="font-mono font-semibold">1.10</span>
+                        </div>
+                        <input id="contrastSlider" type="range" min="0.40" max="2.50" value="1.10" step="0.05" class="w-full accent-indigo-600 cursor-pointer">
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <label for="brightnessSlider" class="font-medium text-zinc-600 dark:text-zinc-400">Brightness</label>
+                            <span id="brightnessValue" class="font-mono font-semibold">0</span>
+                        </div>
+                        <input id="brightnessSlider" type="range" min="-100" max="100" value="0" step="2" class="w-full accent-indigo-600 cursor-pointer">
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <label for="sharpenSlider" class="font-medium text-zinc-600 dark:text-zinc-400">Detail Sharpen</label>
+                            <span id="sharpenValue" class="font-mono font-semibold">0%</span>
+                        </div>
+                        <input id="sharpenSlider" type="range" min="0" max="100" value="0" step="5" class="w-full accent-indigo-600 cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Toggle Switches -->
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <label class="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 cursor-pointer">
+                        <input id="invertToggle" type="checkbox" class="rounded accent-indigo-600"> Invert Tone
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 cursor-pointer">
+                        <input id="ditherToggle" type="checkbox" class="rounded accent-indigo-600"> Bayer Dither
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 cursor-pointer">
+                        <input id="edgeToggle" type="checkbox" class="rounded accent-indigo-600"> Edge Sketch
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 cursor-pointer">
+                        <input id="crtToggle" type="checkbox" class="rounded accent-indigo-600"> CRT Scanlines
+                    </label>
+                </div>
+            </section>
+
+            <!-- CARD 3: COLOR PALETTE & CANVAS THEME -->
+            <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-3">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Color & Canvas Theme</h2>
+
+                <div class="flex items-center justify-between gap-2">
+                    <label class="flex items-center gap-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 cursor-pointer">
+                        <input id="colorToggle" type="checkbox" class="rounded accent-indigo-600">
+                        Full Color Mode
+                    </label>
+                    <select id="colorPaletteSelect" class="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="mono">Mono Ink</option>
+                        <option value="original">Original Color</option>
+                        <option value="gameboy">GameBoy 4-Color</option>
+                        <option value="vaporwave">Vaporwave Duotone</option>
+                        <option value="thermal">Thermal Heatmap</option>
+                        <option value="cyberpunk">Cyberpunk Neon</option>
+                        <option value="rainbow">Rainbow Spectrum</option>
+                    </select>
+                </div>
+
+                <!-- Mono Ink Swatches -->
+                <div id="tintSelectorWrap" class="flex items-center justify-between">
+                    <span class="text-xs text-zinc-500 dark:text-zinc-400">Mono Ink:</span>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" data-tint="#e4e4e7" class="tint-btn w-5 h-5 rounded-full bg-zinc-200 ring-2 ring-indigo-500 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"></button>
+                        <button type="button" data-tint="#4ade80" class="tint-btn w-5 h-5 rounded-full bg-green-400"></button>
+                        <button type="button" data-tint="#38bdf8" class="tint-btn w-5 h-5 rounded-full bg-sky-400"></button>
+                        <button type="button" data-tint="#fbbf24" class="tint-btn w-5 h-5 rounded-full bg-amber-400"></button>
+                        <button type="button" data-tint="#f472b6" class="tint-btn w-5 h-5 rounded-full bg-pink-400"></button>
+                        <button type="button" data-tint="#18181b" class="tint-btn w-5 h-5 rounded-full bg-zinc-900 border border-zinc-500"></button>
+                    </div>
+                </div>
+
+                <!-- Canvas Theme -->
+                <div class="grid grid-cols-4 gap-1.5 pt-1">
+                    <button type="button" data-bg="#09090b" class="bg-theme-btn py-1.5 rounded-lg text-[11px] font-medium border border-indigo-500 bg-zinc-950 text-zinc-200">Obsidian</button>
+                    <button type="button" data-bg="#021408" class="bg-theme-btn py-1.5 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-emerald-950 text-emerald-300">Matrix</button>
+                    <button type="button" data-bg="#0c1222" class="bg-theme-btn py-1.5 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 bg-slate-900 text-sky-300">Terminal</button>
+                    <button type="button" data-bg="#fafaf9" class="bg-theme-btn py-1.5 rounded-lg text-[11px] font-medium border border-zinc-300 bg-stone-100 text-zinc-800">Paper</button>
+                </div>
+            </section>
+
+            <!-- CARD 4: RENDER ANIMATION FX & MOUSE FX -->
+            <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Render & Mouse FX</h2>
+                    <button id="replayFxBtn" type="button" class="text-[11px] font-semibold text-indigo-500 hover:text-indigo-400">Replay FX</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="fxModeSelect" class="block text-[11px] text-zinc-500 mb-1">Render FX</label>
+                        <select id="fxModeSelect" class="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2.5 py-1.5 text-xs">
+                            <option value="none">None (Static)</option>
+                            <option value="typewriter">Typewriter</option>
+                            <option value="scramble">Matrix Decode</option>
+                            <option value="wave">Wave Ripple</option>
+                            <option value="glitch">Cyber Glitch</option>
+                            <option value="scanline">Radar Scanline</option>
+                            <option value="pulse">Breathing Pulse</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="mouseFxSelect" class="block text-[11px] text-zinc-500 mb-1">Mouse / Touch FX</label>
+                        <select id="mouseFxSelect" class="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2.5 py-1.5 text-xs">
+                            <option value="none">Off</option>
+                            <option value="spotlight">Spotlight Torch</option>
+                            <option value="repel">Magnetic Repel</option>
+                            <option value="ripple">Shockwave Ripple</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-0.5">
+                            <span class="text-zinc-500">FX Speed</span>
+                            <span id="fxSpeedValue" class="font-mono">1.0×</span>
+                        </div>
+                        <input id="fxSpeedSlider" type="range" min="0.3" max="3.0" value="1.0" step="0.1" class="w-full accent-indigo-600 cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-0.5">
+                            <span class="text-zinc-500">Intensity</span>
+                            <span id="fxIntensityValue" class="font-mono">60%</span>
+                        </div>
+                        <input id="fxIntensitySlider" type="range" min="10" max="100" value="60" step="5" class="w-full accent-indigo-600 cursor-pointer">
+                    </div>
+                </div>
+            </section>
+
+            <!-- CARD 5: TERMINAL FRAME & WATERMARK -->
+            <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-2.5">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Terminal Frame & Watermark</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="frameStyleSelect" class="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2.5 py-1.5 text-xs">
+                        <option value="none">No Frame</option>
+                        <option value="double">Double ╔═══╗</option>
+                        <option value="single">Single ┌───┐</option>
+                        <option value="macos">macOS ● ● ●</option>
+                        <option value="dos">Retro DOS +---+</option>
+                    </select>
+                    <input id="watermarkInput" type="text" placeholder="Title / Watermark" maxlength="32"
+                        class="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2.5 py-1.5 text-xs font-mono">
+                </div>
+            </section>
+        </aside>
+
+        <!-- RIGHT WORKSPACE: STICKY FULL-WIDTH PREVIEW & EXPORT -->
+        <section class="order-1 md:order-2 flex-1 flex flex-col min-w-0 sticky top-16 z-20 md:static h-[48vh] sm:h-[52vh] md:h-full bg-zinc-200/70 dark:bg-zinc-950 border-b md:border-b-0 border-zinc-300 dark:border-zinc-800">
+
+            <!-- WORKSPACE TOOLBAR -->
+            <div class="shrink-0 px-3 py-2 bg-white/95 dark:bg-zinc-900/95 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+                <!-- Left: Panel Toggle, Zoom & Stats -->
+                <div class="flex items-center gap-1.5">
+                    <button id="toggleSidebarBtn" type="button" title="Toggle Settings Panel (Zen Mode)"
+                        class="hidden md:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500 transition-colors">
+                        Panel
+                    </button>
+                    <div class="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+                        <button id="zoomOutBtn" type="button" class="px-2 py-1 text-xs font-bold hover:bg-zinc-200 dark:hover:bg-zinc-800">−</button>
+                        <span id="fontSizeLabel" class="px-2 text-[11px] font-mono">8px</span>
+                        <button id="zoomInBtn" type="button" class="px-2 py-1 text-xs font-bold hover:bg-zinc-200 dark:hover:bg-zinc-800">+</button>
+                    </div>
+                    <button id="fitScreenBtn" type="button" class="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500 transition-colors">Fit</button>
+                    <span id="gridDimsLabel" class="hidden sm:inline-block text-[11px] font-mono text-zinc-500 dark:text-zinc-400 ml-1">90×45</span>
+                </div>
+
+                <!-- Right: Copy & Export Buttons -->
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <button id="copyBtn" type="button" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-indigo-600 hover:text-white transition-colors">Copy</button>
+                    <button id="copyCodeBlockBtn" type="button" title="Copy wrapped in ``` code block for WhatsApp/Discord" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Copy ```</button>
+                    <button id="downloadTxtBtn" type="button" class="px-2 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500">.TXT</button>
+                    <button id="downloadPngBtn" type="button" class="px-2 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500">.PNG</button>
+                    <button id="downloadSvgBtn" type="button" class="px-2 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500">.SVG</button>
+                    <button id="downloadHtmlBtn" type="button" class="px-2 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500">.HTML</button>
+                    <button id="recordWebmBtn" type="button" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors">Rec .WebM</button>
+                    <button id="recordGifBtn" type="button" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors">Rec .GIF</button>
+                </div>
+            </div>
+
+            <!-- ASCII PREVIEW STAGE -->
+            <div id="previewStage" class="relative flex-1 overflow-auto flex p-4 transition-colors" style="background-color: #09090b;">
+                <pre id="asciiOutput" class="font-mono text-zinc-200 select-text m-auto shrink-0" style="font-size: 8px;"></pre>
+                <div id="crtOverlay" class="crt-overlay pointer-events-none fixed md:absolute inset-0 hidden"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-semibold shadow-xl opacity-0 pointer-events-none transition-all duration-300 translate-y-2">
+        Ready
+    </div>
+
+    <!-- HIDDEN MEDIA & PROCESSING CANVASES -->
+    <canvas id="processingCanvas" class="hidden"></canvas>
+    <canvas id="sourceCanvas" class="hidden"></canvas>
+    <canvas id="exportCanvas" class="hidden"></canvas>
+    <video id="hiddenVideo" class="hidden" playsinline muted loop crossorigin="anonymous"></video>
+    <video id="webcamVideo" class="hidden" playsinline muted autoplay></video>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // =====================================================================
+            // 1. CONSTANTS, CHARSETS & STATE
+            // =====================================================================
+            const CHARSETS = {
+                standard: '@%#*+=-:. ',
+                detailed: "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ",
+                blocks: '█▓▒░ ',
+                minimal: '#+:. ',
+                binary: '10 ',
+                braille: '⣿⣷⣶⣦⣤⣄⣀⠀',
+                matrix: 'ｦｱｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ01 '
+            };
+
+            const BAYER_4X4 = [
+                [0 / 16, 8 / 16, 2 / 16, 10 / 16],
+                [12 / 16, 4 / 16, 14 / 16, 6 / 16],
+                [3 / 16, 11 / 16, 1 / 16, 9 / 16],
+                [15 / 16, 7 / 16, 13 / 16, 5 / 16]
+            ];
+
+            const state = {
+                mode: 'image', // 'image' | 'text' | 'animate' | 'camera' | 'paint'
+                sampleName: 'sphere',
+                hasCustomImage: false,
+
+                // Text banner
+                bannerText: 'ASCII PRO',
+                bannerFont: '900 110px Impact, sans-serif',
+                bannerStyle: 'solid',
+
+                // Animation / video
+                animPreset: 'orbit',
+                animPlaying: true,
+                animFps: 20,
+                hasCustomVideo: false,
+
+                // Webcam
+                camActive: false,
+                camFrozen: false,
+                camMirror: true,
+                camStream: null,
+
+                // Paint mode
+                paintCols: 72,
+                paintRows: 34,
+                paintGrid: [],
+                paintTool: 'brush',
+                paintChar: '#',
+                paintSize: 1,
+                paintColor: '#38bdf8',
+                paintDrawing: false,
+                paintStart: null,
+                paintPreviewGrid: null,
+                paintUndoStack: [],
+                paintRedoStack: [],
+
+                // ASCII conversion settings
+                detailMode: 'standard', // 'standard' | 'photo_hd' | 'braille_hd' | 'halfblock_hd'
+                charsetKey: 'standard',
+                customCharset: '@#S%?*+;:,. ',
+                width: 90,
+                aspect: 0.50,
+                contrast: 1.10,
+                brightness: 0,
+                sharpen: 0,
+                invert: false,
+                dither: false,
+                edgeDetect: false,
+                crt: false,
+
+                // Color & theme
+                color: false,
+                colorPalette: 'mono',
+                tintHex: '#e4e4e7',
+                canvasBg: '#09090b',
+                fontSize: 8,
+
+                // Render FX & Mouse FX
+                fxMode: 'none',
+                fxSpeed: 1.0,
+                fxIntensity: 0.6,
+                fxStartTime: performance.now(),
+                mouseFx: 'none',
+                mouseCol: -999,
+                mouseRow: -999,
+                mouseClickTime: 0,
+                mouseClickCol: -999,
+                mouseClickRow: -999,
+
+                // Frame & Watermark
+                frameStyle: 'none',
+                watermark: '',
+
+                // Output cache
+                lastFinalGrid: [],
+                plainAsciiText: '',
+
+                // Recording state
+                isRecordingWebm: false,
+                mediaRecorder: null,
+                recordedChunks: [],
+                isRecordingGif: false
+            };
+
+            // =====================================================================
+            // 2. DOM REFERENCES
+            // =====================================================================
+            const els = {
+                modeTabs: document.querySelectorAll('.mode-tab'),
+                themeToggleBtn: document.getElementById('themeToggleBtn'),
+                leftSidebar: document.getElementById('leftSidebar'),
+                toggleSidebarBtn: document.getElementById('toggleSidebarBtn'),
+
+                sourcePanelTitle: document.getElementById('sourcePanelTitle'),
+                sourceBadge: document.getElementById('sourceBadge'),
+                panelImage: document.getElementById('panelImage'),
+                panelText: document.getElementById('panelText'),
+                panelAnimate: document.getElementById('panelAnimate'),
+                panelCamera: document.getElementById('panelCamera'),
+                panelPaint: document.getElementById('panelPaint'),
+
+                dropZone: document.getElementById('dropZone'),
+                imageFileInput: document.getElementById('imageFileInput'),
+                sampleBtns: document.querySelectorAll('.sample-btn'),
+                flipHBtn: document.getElementById('flipHBtn'),
+                flipVBtn: document.getElementById('flipVBtn'),
+                rotateCwBtn: document.getElementById('rotateCwBtn'),
+                cropSquareBtn: document.getElementById('cropSquareBtn'),
+                photoPresetBtns: document.querySelectorAll('.photo-preset-btn'),
+
+                bannerTextInput: document.getElementById('bannerTextInput'),
+                bannerFontSelect: document.getElementById('bannerFontSelect'),
+                bannerStyleSelect: document.getElementById('bannerStyleSelect'),
+
+                animPresetBtns: document.querySelectorAll('.anim-preset-btn'),
+                animPlayPauseBtn: document.getElementById('animPlayPauseBtn'),
+                videoFileInput: document.getElementById('videoFileInput'),
+                fpsSlider: document.getElementById('fpsSlider'),
+                fpsValue: document.getElementById('fpsValue'),
+
+                camToggleBtn: document.getElementById('camToggleBtn'),
+                camFreezeBtn: document.getElementById('camFreezeBtn'),
+                camMirrorToggle: document.getElementById('camMirrorToggle'),
+
+                paintToolBtns: document.querySelectorAll('.paint-tool-btn'),
+                paintCharInput: document.getElementById('paintCharInput'),
+                paintSizeSelect: document.getElementById('paintSizeSelect'),
+                paintColorInput: document.getElementById('paintColorInput'),
+                quickCharBtns: document.querySelectorAll('.quick-char-btn'),
+                paintUndoBtn: document.getElementById('paintUndoBtn'),
+                paintRedoBtn: document.getElementById('paintRedoBtn'),
+                paintClearBtn: document.getElementById('paintClearBtn'),
+                paintImportBtn: document.getElementById('paintImportBtn'),
+
+                resetSettingsBtn: document.getElementById('resetSettingsBtn'),
+                detailModeSelect: document.getElementById('detailModeSelect'),
+                charsetPreset: document.getElementById('charsetPreset'),
+                customCharsetInput: document.getElementById('customCharsetInput'),
+                widthSlider: document.getElementById('widthSlider'),
+                widthValue: document.getElementById('widthValue'),
+                widthPresetBtns: document.querySelectorAll('.width-preset-btn'),
+                aspectSlider: document.getElementById('aspectSlider'),
+                aspectValue: document.getElementById('aspectValue'),
+                contrastSlider: document.getElementById('contrastSlider'),
+                contrastValue: document.getElementById('contrastValue'),
+                brightnessSlider: document.getElementById('brightnessSlider'),
+                brightnessValue: document.getElementById('brightnessValue'),
+                sharpenSlider: document.getElementById('sharpenSlider'),
+                sharpenValue: document.getElementById('sharpenValue'),
+                invertToggle: document.getElementById('invertToggle'),
+                ditherToggle: document.getElementById('ditherToggle'),
+                edgeToggle: document.getElementById('edgeToggle'),
+                crtToggle: document.getElementById('crtToggle'),
+
+                colorToggle: document.getElementById('colorToggle'),
+                colorPaletteSelect: document.getElementById('colorPaletteSelect'),
+                tintSelectorWrap: document.getElementById('tintSelectorWrap'),
+                tintBtns: document.querySelectorAll('.tint-btn'),
+                bgThemeBtns: document.querySelectorAll('.bg-theme-btn'),
+
+                fxModeSelect: document.getElementById('fxModeSelect'),
+                mouseFxSelect: document.getElementById('mouseFxSelect'),
+                fxSpeedSlider: document.getElementById('fxSpeedSlider'),
+                fxSpeedValue: document.getElementById('fxSpeedValue'),
+                fxIntensitySlider: document.getElementById('fxIntensitySlider'),
+                fxIntensityValue: document.getElementById('fxIntensityValue'),
+                replayFxBtn: document.getElementById('replayFxBtn'),
+
+                frameStyleSelect: document.getElementById('frameStyleSelect'),
+                watermarkInput: document.getElementById('watermarkInput'),
+
+                zoomOutBtn: document.getElementById('zoomOutBtn'),
+                zoomInBtn: document.getElementById('zoomInBtn'),
+                fontSizeLabel: document.getElementById('fontSizeLabel'),
+                fitScreenBtn: document.getElementById('fitScreenBtn'),
+                gridDimsLabel: document.getElementById('gridDimsLabel'),
+
+                copyBtn: document.getElementById('copyBtn'),
+                copyCodeBlockBtn: document.getElementById('copyCodeBlockBtn'),
+                downloadTxtBtn: document.getElementById('downloadTxtBtn'),
+                downloadPngBtn: document.getElementById('downloadPngBtn'),
+                downloadSvgBtn: document.getElementById('downloadSvgBtn'),
+                downloadHtmlBtn: document.getElementById('downloadHtmlBtn'),
+                recordWebmBtn: document.getElementById('recordWebmBtn'),
+                recordGifBtn: document.getElementById('recordGifBtn'),
+
+                previewStage: document.getElementById('previewStage'),
+                asciiOutput: document.getElementById('asciiOutput'),
+                crtOverlay: document.getElementById('crtOverlay'),
+                toast: document.getElementById('toast'),
+
+                processingCanvas: document.getElementById('processingCanvas'),
+                sourceCanvas: document.getElementById('sourceCanvas'),
+                exportCanvas: document.getElementById('exportCanvas'),
+                hiddenVideo: document.getElementById('hiddenVideo'),
+                webcamVideo: document.getElementById('webcamVideo')
+            };
+
+            // =====================================================================
+            // 3. UTILITIES
+            // =====================================================================
+            let toastTimer = null;
+            function showToast(msg) {
+                els.toast.textContent = msg;
+                els.toast.classList.remove('opacity-0', 'translate-y-2');
+                els.toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => {
+                    els.toast.classList.add('opacity-0', 'translate-y-2');
+                    els.toast.classList.remove('opacity-100', 'translate-y-0');
+                }, 2200);
+            }
+
+            function hexToRgb(hex) {
+                const clean = hex.replace('#', '');
+                const num = parseInt(clean, 16);
+                return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+            }
+
+            function copyTextToClipboard(text, successMsg) {
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast(successMsg);
+                } catch (err) {
+                    showToast('Clipboard copy failed');
+                }
+            }
+
+            function triggerDownload(blob, filename) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }
+
+            // =====================================================================
+            // 4. PROCEDURAL SAMPLE ARTWORKS & ANIMATIONS
+            // =====================================================================
+            function drawSampleArtwork(name) {
+                const c = els.sourceCanvas;
+                c.width = 480;
+                c.height = 360;
+                const ctx = c.getContext('2d');
+                ctx.clearRect(0, 0, c.width, c.height);
+
+                if (name === 'sphere') {
+                    ctx.fillStyle = '#05050a';
+                    ctx.fillRect(0, 0, c.width, c.height);
+                    // Starfield
+                    for (let i = 0; i < 60; i++) {
+                        ctx.fillStyle = `rgba(255,255,255,${(i % 5) * 0.2})`;
+                        ctx.fillRect((i * 73) % c.width, (i * 41) % c.height, 2, 2);
+                    }
+                    // 3D Lit Sphere
+                    const grad = ctx.createRadialGradient(195, 135, 15, 240, 180, 130);
+                    grad.addColorStop(0, '#ffffff');
+                    grad.addColorStop(0.28, '#818cf8');
+                    grad.addColorStop(0.68, '#312e81');
+                    grad.addColorStop(1, '#090915');
+                    ctx.beginPath();
+                    ctx.arc(240, 180, 128, 0, Math.PI * 2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                    // Orbit Ring
+                    ctx.strokeStyle = 'rgba(244, 114, 182, 0.85)';
+                    ctx.lineWidth = 10;
+                    ctx.beginPath();
+                    ctx.ellipse(240, 185, 185, 42, -0.25, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (name === 'sunset') {
+                    const sky = ctx.createLinearGradient(0, 0, 0, 220);
+                    sky.addColorStop(0, '#1e1b4b');
+                    sky.addColorStop(0.55, '#db2777');
+                    sky.addColorStop(1, '#fb923c');
+                    ctx.fillStyle = sky;
+                    ctx.fillRect(0, 0, c.width, 220);
+
+                    // Retro Sun
+                    const sun = ctx.createLinearGradient(0, 60, 0, 210);
+                    sun.addColorStop(0, '#fef08a');
+                    sun.addColorStop(1, '#f43f5e');
+                    ctx.fillStyle = sun;
+                    ctx.beginPath();
+                    ctx.arc(240, 165, 78, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Sun scan stripes
+                    ctx.fillStyle = '#db2777';
+                    for (let y = 160; y < 220; y += 11) {
+                        ctx.fillRect(150, y, 180, 4);
+                    }
+
+                    // Mountains
+                    ctx.fillStyle = '#09090b';
+                    ctx.beginPath();
+                    ctx.moveTo(0, 220);
+                    ctx.lineTo(95, 135);
+                    ctx.lineTo(175, 200);
+                    ctx.lineTo(270, 145);
+                    ctx.lineTo(365, 195);
+                    ctx.lineTo(445, 130);
+                    ctx.lineTo(480, 220);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Grid floor
+                    ctx.fillStyle = '#0f0524';
+                    ctx.fillRect(0, 220, c.width, 140);
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 2;
+                    for (let y = 230; y < 360; y += 18) {
+                        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(480, y); ctx.stroke();
+                    }
+                    for (let x = -120; x <= 600; x += 60) {
+                        ctx.beginPath(); ctx.moveTo(240, 220); ctx.lineTo(x, 360); ctx.stroke();
+                    }
+                } else if (name === 'wave') {
+                    ctx.fillStyle = '#020617';
+                    ctx.fillRect(0, 0, c.width, c.height);
+                    for (let i = 0; i < 12; i++) {
+                        ctx.beginPath();
+                        for (let x = 0; x <= c.width; x += 6) {
+                            const y = 180 + Math.sin(x * 0.025 + i * 0.55) * (35 + i * 7) + Math.cos(x * 0.012 - i) * 20;
+                            if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                        }
+                        ctx.strokeStyle = `hsl(${185 + i * 12}, 90%, ${45 + i * 3}%)`;
+                        ctx.lineWidth = 5;
+                        ctx.stroke();
+                    }
+                } else {
+                    // Cyber Bot Portrait
+                    ctx.fillStyle = '#09090b';
+                    ctx.fillRect(0, 0, c.width, c.height);
+                    const halo = ctx.createRadialGradient(240, 175, 20, 240, 175, 170);
+                    halo.addColorStop(0, 'rgba(56,189,248,0.45)');
+                    halo.addColorStop(1, 'rgba(9,9,11,0)');
+                    ctx.fillStyle = halo;
+                    ctx.fillRect(0, 0, c.width, c.height);
+
+                    // Head
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.beginPath();
+                    ctx.roundRect(145, 70, 190, 210, 48);
+                    ctx.fill();
+
+                    // Visor
+                    const visor = ctx.createLinearGradient(165, 130, 315, 185);
+                    visor.addColorStop(0, '#0ea5e9');
+                    visor.addColorStop(1, '#a855f7');
+                    ctx.fillStyle = visor;
+                    ctx.beginPath();
+                    ctx.roundRect(165, 125, 150, 56, 24);
+                    ctx.fill();
+
+                    // Glowing Eyes
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.arc(205, 153, 14, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(275, 153, 14, 0, Math.PI * 2); ctx.fill();
+
+                    // Mouth grille
+                    ctx.fillStyle = '#1e293b';
+                    for (let x = 192; x <= 284; x += 18) {
+                        ctx.fillRect(x, 218, 10, 28);
+                    }
+                }
+            }
+
+            function drawTextBannerToSource() {
+                const c = els.sourceCanvas;
+                c.width = 640;
+                c.height = 220;
+                const ctx = c.getContext('2d');
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, c.width, c.height);
+
+                const txt = (state.bannerText || 'ASCII').toUpperCase();
+                ctx.font = state.bannerFont;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                if (state.bannerStyle === 'shadow') {
+                    ctx.fillStyle = '#6366f1';
+                    ctx.fillText(txt, c.width / 2 + 8, c.height / 2 + 8, c.width - 30);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(txt, c.width / 2, c.height / 2, c.width - 30);
+                } else if (state.bannerStyle === 'outline') {
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 6;
+                    ctx.strokeText(txt, c.width / 2, c.height / 2, c.width - 30);
+                } else {
+                    const grad = ctx.createLinearGradient(0, 40, 0, 180);
+                    grad.addColorStop(0, '#ffffff');
+                    grad.addColorStop(0.5, '#38bdf8');
+                    grad.addColorStop(1, '#c084fc');
+                    ctx.fillStyle = grad;
+                    ctx.fillText(txt, c.width / 2, c.height / 2, c.width - 30);
+                }
+            }
+
+            function drawProceduralAnimationFrame(now) {
+                const c = els.sourceCanvas;
+                if (c.width !== 320 || c.height !== 220) {
+                    c.width = 320;
+                    c.height = 220;
+                }
+                const ctx = c.getContext('2d');
+                const t = now * 0.0018;
+                const w = c.width, h = c.height;
+
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, w, h);
+
+                if (state.animPreset === 'orbit') {
+                    // 3D Orbiting spheres & ring
+                    const cx = w / 2, cy = h / 2;
+                    for (let i = 0; i < 16; i++) {
+                        const ang = t + (i / 16) * Math.PI * 2;
+                        const x = cx + Math.cos(ang) * 105;
+                        const y = cy + Math.sin(ang) * 42;
+                        const depth = (Math.sin(ang) + 1.5) * 0.5;
+                        ctx.fillStyle = `hsl(${(i * 22 + t * 60) % 360}, 90%, ${40 + depth * 40}%)`;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 7 + depth * 12, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    const g = ctx.createRadialGradient(cx - 10, cy - 10, 4, cx, cy, 44);
+                    g.addColorStop(0, '#ffffff');
+                    g.addColorStop(1, '#4f46e5');
+                    ctx.fillStyle = g;
+                    ctx.beginPath(); ctx.arc(cx, cy, 42, 0, Math.PI * 2); ctx.fill();
+                } else if (state.animPreset === 'plasma') {
+                    const step = 10;
+                    for (let y = 0; y < h; y += step) {
+                        for (let x = 0; x < w; x += step) {
+                            const v = Math.sin(x * 0.03 + t) + Math.sin(y * 0.04 - t) + Math.sin((x + y) * 0.02 + t);
+                            const hue = ((v + 3) / 6) * 360;
+                            const light = 20 + ((v + 3) / 6) * 65;
+                            ctx.fillStyle = `hsl(${hue}, 90%, ${light}%)`;
+                            ctx.fillRect(x, y, step, step);
+                        }
+                    }
+                } else if (state.animPreset === 'rain') {
+                    for (let i = 0; i < 32; i++) {
+                        const x = i * 10;
+                        const y = ((t * 95 + i * 37) % (h + 100)) - 50;
+                        const grad = ctx.createLinearGradient(0, y - 60, 0, y + 10);
+                        grad.addColorStop(0, 'rgba(0,0,0,0)');
+                        grad.addColorStop(0.8, '#22c55e');
+                        grad.addColorStop(1, '#ffffff');
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(x, y - 60, 7, 70);
+                    }
+                } else if (state.animPreset === 'radar') {
+                    const cx = w / 2, cy = h / 2, r = 95;
+                    ctx.strokeStyle = '#15803d';
+                    ctx.lineWidth = 2;
+                    for (let k = 1; k <= 3; k++) {
+                        ctx.beginPath(); ctx.arc(cx, cy, (r / 3) * k, 0, Math.PI * 2); ctx.stroke();
+                    }
+                    const ang = t * 1.4;
+                    ctx.fillStyle = 'rgba(74, 222, 128, 0.35)';
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.arc(cx, cy, r, ang - 0.8, ang);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Blips
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.arc(cx + 42, cy - 30, 6, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx - 50, cy + 25, 5, 0, Math.PI * 2); ctx.fill();
+                } else if (state.animPreset === 'bars') {
+                    const count = 16;
+                    const bw = w / count;
+                    for (let i = 0; i < count; i++) {
+                        const bh = 25 + Math.abs(Math.sin(t * 2.5 + i * 0.5)) * (h - 55);
+                        ctx.fillStyle = `hsl(${190 + i * 10}, 90%, 60%)`;
+                        ctx.fillRect(i * bw + 3, h - bh, bw - 6, bh);
+                    }
+                } else {
+                    // 3D Wire Cube
+                    const verts = [
+                        [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+                        [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]
+                    ];
+                    const edges = [
+                        [0, 1], [1, 2], [2, 3], [3, 0],
+                        [4, 5], [5, 6], [6, 7], [7, 4],
+                        [0, 4], [1, 5], [2, 6], [3, 7]
+                    ];
+                    const proj = verts.map(([x, y, z]) => {
+                        const x1 = x * Math.cos(t) - z * Math.sin(t);
+                        const z1 = x * Math.sin(t) + z * Math.cos(t);
+                        const y2 = y * Math.cos(t * 0.7) - z1 * Math.sin(t * 0.7);
+                        const z2 = y * Math.sin(t * 0.7) + z1 * Math.cos(t * 0.7);
+                        const scale = 210 / (z2 + 3.4);
+                        return [w / 2 + x1 * scale, h / 2 + y2 * scale];
+                    });
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 6;
+                    edges.forEach(([a, b]) => {
+                        ctx.beginPath();
+                        ctx.moveTo(proj[a][0], proj[a][1]);
+                        ctx.lineTo(proj[b][0], proj[b][1]);
+                        ctx.stroke();
+                    });
+                }
+            }
+
+            // =====================================================================
+            // 5. IMAGE TRANSFORMS
+            // =====================================================================
+            function transformSourceImage(action) {
+                if (state.mode !== 'image') return;
+                const src = els.sourceCanvas;
+                const w = src.width, h = src.height;
+                if (!w || !h) return;
+
+                const temp = document.createElement('canvas');
+                const tctx = temp.getContext('2d');
+
+                if (action === 'flipH') {
+                    temp.width = w; temp.height = h;
+                    tctx.translate(w, 0); tctx.scale(-1, 1);
+                    tctx.drawImage(src, 0, 0);
+                } else if (action === 'flipV') {
+                    temp.width = w; temp.height = h;
+                    tctx.translate(0, h); tctx.scale(1, -1);
+                    tctx.drawImage(src, 0, 0);
+                } else if (action === 'rotateCw') {
+                    temp.width = h; temp.height = w;
+                    tctx.translate(h / 2, w / 2);
+                    tctx.rotate(Math.PI / 2);
+                    tctx.drawImage(src, -w / 2, -h / 2);
+                } else if (action === 'cropSquare') {
+                    const size = Math.min(w, h);
+                    const sx = (w - size) / 2;
+                    const sy = (h - size) / 2;
+                    temp.width = size; temp.height = size;
+                    tctx.drawImage(src, sx, sy, size, size, 0, 0, size, size);
+                }
+
+                src.width = temp.width;
+                src.height = temp.height;
+                src.getContext('2d').drawImage(temp, 0, 0);
+                renderAscii();
+                showToast(`Applied ${action}`);
+            }
+
+            // =====================================================================
+            // 6. ASCII PAINT ENGINE
+            // =====================================================================
+            function initPaintGrid(cols = state.paintCols, rows = state.paintRows) {
+                state.paintCols = cols;
+                state.paintRows = rows;
+                const rgb = hexToRgb(state.tintHex);
+                state.paintGrid = Array.from({ length: rows }, () =>
+                    Array.from({ length: cols }, () => ({ ch: ' ', r: rgb.r, g: rgb.g, b: rgb.b }))
+                );
+                state.paintUndoStack = [];
+                state.paintRedoStack = [];
+            }
+
+            function cloneGrid(grid) {
+                return grid.map(row => row.map(c => ({ ...c })));
+            }
+
+            function pushPaintUndo() {
+                state.paintUndoStack.push(cloneGrid(state.paintGrid));
+                if (state.paintUndoStack.length > 30) state.paintUndoStack.shift();
+                state.paintRedoStack = [];
+            }
+
+            function paintStamp(grid, col, row, ch, rgb, size) {
+                const half = Math.floor(size / 2);
+                for (let dy = -half; dy < size - half; dy++) {
+                    for (let dx = -half; dx < size - half; dx++) {
+                        const ny = row + dy;
+                        const nx = col + dx;
+                        if (ny >= 0 && ny < grid.length && nx >= 0 && nx < grid[0].length) {
+                            grid[ny][nx] = { ch, r: rgb.r, g: rgb.g, b: rgb.b };
+                        }
+                    }
+                }
+            }
+
+            function paintLine(grid, x0, y0, x1, y1, ch, rgb, size) {
+                let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+                let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+                let err = dx + dy;
+                while (true) {
+                    paintStamp(grid, x0, y0, ch, rgb, size);
+                    if (x0 === x1 && y0 === y1) break;
+                    const e2 = 2 * err;
+                    if (e2 >= dy) { err += dy; x0 += sx; }
+                    if (e2 <= dx) { err += dx; y0 += sy; }
+                }
+            }
+
+            function paintBox(grid, x0, y0, x1, y1, ch, rgb) {
+                const minX = Math.min(x0, x1), maxX = Math.max(x0, x1);
+                const minY = Math.min(y0, y1), maxY = Math.max(y0, y1);
+                for (let x = minX; x <= maxX; x++) {
+                    paintStamp(grid, x, minY, ch, rgb, 1);
+                    paintStamp(grid, x, maxY, ch, rgb, 1);
+                }
+                for (let y = minY; y <= maxY; y++) {
+                    paintStamp(grid, minX, y, ch, rgb, 1);
+                    paintStamp(grid, maxX, y, ch, rgb, 1);
+                }
+            }
+
+            function paintFloodFill(grid, startX, startY, newCh, rgb) {
+                const rows = grid.length, cols = grid[0].length;
+                if (startY < 0 || startY >= rows || startX < 0 || startX >= cols) return;
+                const targetCh = grid[startY][startX].ch;
+                if (targetCh === newCh && grid[startY][startX].r === rgb.r && grid[startY][startX].g === rgb.g && grid[startY][startX].b === rgb.b) return;
+                const queue = [[startX, startY]];
+                const visited = new Set();
+                while (queue.length > 0) {
+                    const [x, y] = queue.shift();
+                    const key = `${x},${y}`;
+                    if (visited.has(key)) continue;
+                    visited.add(key);
+                    if (x < 0 || x >= cols || y < 0 || y >= rows) continue;
+                    if (grid[y][x].ch !== targetCh) continue;
+                    grid[y][x] = { ch: newCh, r: rgb.r, g: rgb.g, b: rgb.b };
+                    queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+                }
+            }
+
+            function getCellCoordsFromEvent(e) {
+                const rect = els.asciiOutput.getBoundingClientRect();
+                const grid = state.lastFinalGrid;
+                if (!grid.length || !rect.width || !rect.height) return null;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const col = Math.floor(((clientX - rect.left) / rect.width) * grid[0].length);
+                const row = Math.floor(((clientY - rect.top) / rect.height) * grid.length);
+                return { col, row };
+            }
+
+            // =====================================================================
+            // 7. COLOR PALETTES, SHARPENING & CORE ASCII RENDERER
+            // =====================================================================
+            function getActiveCharset() {
+                const raw = state.charsetKey === 'custom'
+                    ? (state.customCharset || '@#S%?*+;:,. ')
+                    : (CHARSETS[state.charsetKey] || CHARSETS.standard);
+                const chars = Array.from(raw);
+                return state.invert ? chars : chars.slice().reverse();
+            }
+
+            function applyColorPalette(r, g, b, lum, x, y, cols, rows, now) {
+                const pal = state.colorPalette;
+                if (pal === 'mono') {
+                    if (state.color) return [r, g, b];
+                    const t = hexToRgb(state.tintHex);
+                    return [t.r, t.g, t.b];
+                }
+                if (pal === 'original') return [r, g, b];
+
+                const norm = Math.max(0, Math.min(1, lum / 255));
+                if (pal === 'gameboy') {
+                    const gb = [[15, 56, 15], [48, 98, 48], [139, 172, 15], [155, 188, 15]];
+                    return gb[Math.min(3, Math.floor(norm * 4))];
+                }
+                if (pal === 'vaporwave') {
+                    return [
+                        Math.round(45 + norm * 210),
+                        Math.round(20 + norm * 165),
+                        Math.round(110 + (1 - Math.abs(norm - 0.5)) * 145)
+                    ];
+                }
+                if (pal === 'thermal') {
+                    if (norm < 0.33) {
+                        const k = norm / 0.33;
+                        return [Math.round(k * 120), 0, Math.round(80 + k * 140)];
+                    } else if (norm < 0.66) {
+                        const k = (norm - 0.33) / 0.33;
+                        return [Math.round(120 + k * 135), Math.round(k * 120), Math.round(220 - k * 200)];
+                    } else {
+                        const k = (norm - 0.66) / 0.34;
+                        return [255, Math.round(120 + k * 135), Math.round(20 + k * 220)];
+                    }
+                }
+                if (pal === 'cyberpunk') {
+                    return norm > 0.55
+                        ? [Math.round(56 + norm * 40), Math.round(200 + norm * 55), 255]
+                        : [Math.round(180 + norm * 75), Math.round(30 + norm * 60), Math.round(180 + norm * 75)];
+                }
+                if (pal === 'rainbow') {
+                    const hue = ((x / Math.max(1, cols)) * 360 + (y / Math.max(1, rows)) * 120 + now * 0.08) % 360;
+                    const s = 0.9, l = 0.45 + norm * 0.3;
+                    const c = (1 - Math.abs(2 * l - 1)) * s;
+                    const hp = hue / 60;
+                    const xVal = c * (1 - Math.abs((hp % 2) - 1));
+                    let rr = 0, gg = 0, bb = 0;
+                    if (hp < 1) { rr = c; gg = xVal; }
+                    else if (hp < 2) { rr = xVal; gg = c; }
+                    else if (hp < 3) { gg = c; bb = xVal; }
+                    else if (hp < 4) { gg = xVal; bb = c; }
+                    else if (hp < 5) { rr = xVal; bb = c; }
+                    else { rr = c; bb = xVal; }
+                    const m = l - c / 2;
+                    return [Math.round((rr + m) * 255), Math.round((gg + m) * 255), Math.round((bb + m) * 255)];
+                }
+                return [r, g, b];
+            }
+
+            // Unsharp-mask sharpening + Sobel edge detection helper for high-detail photo sampling
+            function preprocessSampleBuffer(imgData, w, h, contrast, brightness, sharpen, edgeDetect) {
+                const total = w * h;
+                const rgbBuf = new Uint8ClampedArray(total * 3);
+                const lumBuf = new Float32Array(total);
+
+                for (let i = 0; i < total; i++) {
+                    const idx = i * 4;
+                    const a = imgData[idx + 3] / 255;
+                    let r = imgData[idx] * a;
+                    let g = imgData[idx + 1] * a;
+                    let b = imgData[idx + 2] * a;
+
+                    r = Math.min(255, Math.max(0, (r - 128) * contrast + 128 + brightness));
+                    g = Math.min(255, Math.max(0, (g - 128) * contrast + 128 + brightness));
+                    b = Math.min(255, Math.max(0, (b - 128) * contrast + 128 + brightness));
+
+                    rgbBuf[i * 3] = r;
+                    rgbBuf[i * 3 + 1] = g;
+                    rgbBuf[i * 3 + 2] = b;
+                    lumBuf[i] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                }
+
+                // 3x3 Unsharp Mask Sharpening
+                let sharpLum = lumBuf;
+                if (sharpen > 0 && w > 2 && h > 2) {
+                    const amount = sharpen * 1.45;
+                    sharpLum = new Float32Array(lumBuf);
+                    const sharpRgb = new Uint8ClampedArray(rgbBuf);
+                    for (let y = 1; y < h - 1; y++) {
+                        for (let x = 1; x < w - 1; x++) {
+                            const i = y * w + x;
+                            const blurL = (lumBuf[i - w] + lumBuf[i + w] + lumBuf[i - 1] + lumBuf[i + 1]) * 0.25;
+                            sharpLum[i] = Math.min(255, Math.max(0, lumBuf[i] + (lumBuf[i] - blurL) * amount));
+
+                            for (let c = 0; c < 3; c++) {
+                                const ci = i * 3 + c;
+                                const blurC = (
+                                    rgbBuf[(i - w) * 3 + c] + rgbBuf[(i + w) * 3 + c] +
+                                    rgbBuf[(i - 1) * 3 + c] + rgbBuf[(i + 1) * 3 + c]
+                                ) * 0.25;
+                                sharpRgb[ci] = Math.min(255, Math.max(0, rgbBuf[ci] + (rgbBuf[ci] - blurC) * amount));
+                            }
+                        }
+                    }
+                    rgbBuf.set(sharpRgb);
+                }
+
+                // Optional Sobel Edge Sketch
+                let finalLum = sharpLum;
+                if (edgeDetect && w > 2 && h > 2) {
+                    finalLum = new Float32Array(total);
+                    for (let y = 1; y < h - 1; y++) {
+                        for (let x = 1; x < w - 1; x++) {
+                            const tl = sharpLum[(y - 1) * w + (x - 1)];
+                            const tc = sharpLum[(y - 1) * w + x];
+                            const tr = sharpLum[(y - 1) * w + (x + 1)];
+                            const ml = sharpLum[y * w + (x - 1)];
+                            const mr = sharpLum[y * w + (x + 1)];
+                            const bl = sharpLum[(y + 1) * w + (x - 1)];
+                            const bc = sharpLum[(y + 1) * w + x];
+                            const br = sharpLum[(y + 1) * w + (x + 1)];
+
+                            const gx = -tl - 2 * ml - bl + tr + 2 * mr + br;
+                            const gy = -tl - 2 * tc - tr + bl + 2 * bc + br;
+                            finalLum[y * w + x] = Math.min(255, Math.sqrt(gx * gx + gy * gy) * 1.15);
+                        }
+                    }
+                }
+
+                return { rgbBuf, finalLum };
+            }
+
+            function getCurrentSourceDrawable() {
+                if (state.mode === 'animate' && state.hasCustomVideo && els.hiddenVideo.readyState >= 2) {
+                    return els.hiddenVideo;
+                }
+                if (state.mode === 'camera' && state.camActive && els.webcamVideo.readyState >= 2) {
+                    return els.webcamVideo;
+                }
+                return els.sourceCanvas;
+            }
+
+            function applyTerminalFrame(grid) {
+                if (state.frameStyle === 'none' || !grid.length) return grid;
+                const innerCols = grid[0].length;
+                const tint = hexToRgb(state.tintHex);
+                const mk = (ch, r = tint.r, g = tint.g, b = tint.b) => ({ ch, r, g, b });
+
+                let tl = '╔', tr = '╗', bl = '╚', br = '╝', hz = '═', vt = '║';
+                if (state.frameStyle === 'single') { tl = '┌'; tr = '┐'; bl = '└'; br = '┘'; hz = '─'; vt = '│'; }
+                else if (state.frameStyle === 'dos') { tl = '+'; tr = '+'; bl = '+'; br = '+'; hz = '-'; vt = '|'; }
+                else if (state.frameStyle === 'macos') { tl = '╭'; tr = '╮'; bl = '╰'; br = '╯'; hz = '─'; vt = '│'; }
+
+                const title = state.watermark.trim();
+                const out = [];
+
+                // Top border
+                const topRow = [mk(tl)];
+                for (let x = 0; x < innerCols; x++) topRow.push(mk(hz));
+                topRow.push(mk(tr));
+                if (title && innerCols > title.length + 4) {
+                    const label = ` ${title} `;
+                    const start = Math.floor((innerCols - label.length) / 2) + 1;
+                    for (let i = 0; i < label.length; i++) topRow[start + i] = mk(label[i]);
+                }
+                out.push(topRow);
+
+                // Optional macOS window header bar
+                if (state.frameStyle === 'macos') {
+                    const bar = [mk(vt)];
+                    for (let x = 0; x < innerCols; x++) bar.push(mk(' '));
+                    bar.push(mk(vt));
+                    if (innerCols >= 8) {
+                        bar[2] = mk('●', 239, 68, 68);
+                        bar[4] = mk('●', 245, 158, 11);
+                        bar[6] = mk('●', 34, 197, 94);
+                    }
+                    out.push(bar);
+                }
+
+                // Content rows
+                for (let y = 0; y < grid.length; y++) {
+                    out.push([mk(vt), ...grid[y], mk(vt)]);
+                }
+
+                // Bottom border
+                const botRow = [mk(bl)];
+                for (let x = 0; x < innerCols; x++) botRow.push(mk(hz));
+                botRow.push(mk(br));
+                out.push(botRow);
+
+                return out;
+            }
+
+            function renderAscii(now = performance.now()) {
+                try {
+                    let grid = [];
+                    let cols = state.width;
+                    let rows = 30;
+
+                    if (state.mode === 'paint') {
+                        const activePaint = state.paintPreviewGrid || state.paintGrid;
+                        grid = activePaint.map(row => row.map(c => ({ ...c })));
+                        rows = grid.length;
+                        cols = grid[0].length;
+                    } else {
+                        if (state.mode === 'text') drawTextBannerToSource();
+                        else if (state.mode === 'animate' && !state.hasCustomVideo) drawProceduralAnimationFrame(now);
+
+                        const source = getCurrentSourceDrawable();
+                        const srcW = source.videoWidth || source.width;
+                        const srcH = source.videoHeight || source.height;
+                        if (!srcW || !srcH) return;
+
+                        rows = Math.max(4, Math.round((srcH / srcW) * cols * state.aspect));
+
+                        const dMode = state.detailMode;
+                        const subX = dMode === 'braille_hd' ? 2 : 1;
+                        const subY = dMode === 'braille_hd' ? 4 : (dMode === 'halfblock_hd' ? 2 : 1);
+                        const sampleW = cols * subX;
+                        const sampleH = rows * subY;
+
+                        const proc = els.processingCanvas;
+                        proc.width = sampleW;
+                        proc.height = sampleH;
+                        const ctx = proc.getContext('2d', { willReadFrequently: true });
+
+                        ctx.save();
+                        if (state.mode === 'camera' && state.camMirror && state.camActive) {
+                            ctx.translate(sampleW, 0);
+                            ctx.scale(-1, 1);
+                        }
+                        ctx.drawImage(source, 0, 0, sampleW, sampleH);
+                        ctx.restore();
+
+                        const imgData = ctx.getImageData(0, 0, sampleW, sampleH).data;
+                        const contrast = state.mode === 'text' ? 1.0 : state.contrast;
+                        const fxElapsed = ((now - state.fxStartTime) / 1000) * state.fxSpeed;
+
+                        let extraBrightness = 0;
+                        if (state.fxMode === 'pulse') {
+                            extraBrightness = Math.sin(fxElapsed * 3.5) * 65 * state.fxIntensity;
+                        }
+                        const brightness = (state.mode === 'text' ? 0 : state.brightness) + extraBrightness;
+                        const sharpenVal = state.mode === 'text' ? 0 : state.sharpen;
+
+                        const { rgbBuf, finalLum } = preprocessSampleBuffer(
+                            imgData, sampleW, sampleH, contrast, brightness, sharpenVal, state.edgeDetect
+                        );
+
+                        if (dMode === 'braille_hd') {
+                            // ULTRA BRAILLE 2x4 SUB-PIXEL ENGINE (8x SPATIAL DETAIL)
+                            const errBuf = new Float32Array(finalLum);
+                            const dotBits = new Uint8Array(sampleW * sampleH);
+
+                            for (let py = 0; py < sampleH; py++) {
+                                for (let px = 0; px < sampleW; px++) {
+                                    const idx = py * sampleW + px;
+                                    const oldVal = errBuf[idx];
+                                    const isLit = oldVal >= 127.5;
+                                    const quant = isLit ? 255 : 0;
+                                    dotBits[idx] = state.invert ? (isLit ? 0 : 1) : (isLit ? 1 : 0);
+
+                                    const err = oldVal - quant;
+                                    if (px + 1 < sampleW) errBuf[idx + 1] += err * (7 / 16);
+                                    if (py + 1 < sampleH) {
+                                        if (px > 0) errBuf[idx + sampleW - 1] += err * (3 / 16);
+                                        errBuf[idx + sampleW] += err * (5 / 16);
+                                        if (px + 1 < sampleW) errBuf[idx + sampleW + 1] += err * (1 / 16);
+                                    }
+                                }
+                            }
+
+                            const BRAILLE_MAP = [
+                                [0, 0, 0x01], [0, 1, 0x02], [0, 2, 0x04], [0, 3, 0x40],
+                                [1, 0, 0x08], [1, 1, 0x10], [1, 2, 0x20], [1, 3, 0x80]
+                            ];
+
+                            for (let y = 0; y < rows; y++) {
+                                const rowArr = [];
+                                for (let x = 0; x < cols; x++) {
+                                    let mask = 0;
+                                    let sumR = 0, sumG = 0, sumB = 0, sumL = 0;
+                                    for (let k = 0; k < 8; k++) {
+                                        const sx = x * 2 + BRAILLE_MAP[k][0];
+                                        const sy = y * 4 + BRAILLE_MAP[k][1];
+                                        const si = sy * sampleW + sx;
+                                        if (dotBits[si]) mask |= BRAILLE_MAP[k][2];
+                                        sumR += rgbBuf[si * 3];
+                                        sumG += rgbBuf[si * 3 + 1];
+                                        sumB += rgbBuf[si * 3 + 2];
+                                        sumL += finalLum[si];
+                                    }
+                                    const ch = String.fromCharCode(0x2800 | mask);
+                                    const [pr, pg, pb] = applyColorPalette(
+                                        sumR / 8, sumG / 8, sumB / 8, sumL / 8,
+                                        x, y, cols, rows, now
+                                    );
+                                    rowArr.push({ ch, r: Math.round(pr), g: Math.round(pg), b: Math.round(pb) });
+                                }
+                                grid.push(rowArr);
+                            }
+                        } else if (dMode === 'halfblock_hd') {
+                            // TRUE-COLOR HALF-BLOCK 1x2 SUB-PIXEL PHOTO ENGINE (▀)
+                            for (let y = 0; y < rows; y++) {
+                                const rowArr = [];
+                                for (let x = 0; x < cols; x++) {
+                                    const topIdx = (y * 2) * sampleW + x;
+                                    const botIdx = (y * 2 + 1) * sampleW + x;
+
+                                    const tLum = state.invert ? 255 - finalLum[topIdx] : finalLum[topIdx];
+                                    const bLum = state.invert ? 255 - finalLum[botIdx] : finalLum[botIdx];
+
+                                    let tr = rgbBuf[topIdx * 3], tg = rgbBuf[topIdx * 3 + 1], tb = rgbBuf[topIdx * 3 + 2];
+                                    let br = rgbBuf[botIdx * 3], bg = rgbBuf[botIdx * 3 + 1], bb = rgbBuf[botIdx * 3 + 2];
+
+                                    if (state.invert) {
+                                        tr = 255 - tr; tg = 255 - tg; tb = 255 - tb;
+                                        br = 255 - br; bg = 255 - bg; bb = 255 - bb;
+                                    }
+
+                                    if (state.colorPalette === 'mono' && !state.color) {
+                                        const tint = hexToRgb(state.tintHex);
+                                        const tf = tLum / 255;
+                                        const bf = bLum / 255;
+                                        tr = Math.round(tint.r * tf); tg = Math.round(tint.g * tf); tb = Math.round(tint.b * tf);
+                                        br = Math.round(tint.r * bf); bg = Math.round(tint.g * bf); bb = Math.round(tint.b * bf);
+                                    } else {
+                                        [tr, tg, tb] = applyColorPalette(tr, tg, tb, tLum, x, y, cols, rows, now);
+                                        [br, bg, bb] = applyColorPalette(br, bg, bb, bLum, x, y, cols, rows, now);
+                                    }
+
+                                    rowArr.push({
+                                        ch: '▀',
+                                        r: Math.round(tr), g: Math.round(tg), b: Math.round(tb),
+                                        br: Math.round(br), bg: Math.round(bg), bb: Math.round(bb)
+                                    });
+                                }
+                                grid.push(rowArr);
+                            }
+                        } else {
+                            // STANDARD & HD PHOTO ASCII (WITH FLOYD-STEINBERG)
+                            const ramp = dMode === 'photo_hd'
+                                ? (state.invert ? Array.from(CHARSETS.detailed) : Array.from(CHARSETS.detailed).reverse())
+                                : getActiveCharset();
+                            const rampLen = ramp.length - 1;
+                            const useFS = dMode === 'photo_hd';
+                            const errBuf = useFS ? new Float32Array(finalLum) : finalLum;
+
+                            for (let y = 0; y < rows; y++) {
+                                const rowArr = [];
+                                for (let x = 0; x < cols; x++) {
+                                    const i = y * cols + x;
+                                    let lum = errBuf[i];
+
+                                    if (!useFS && state.dither) {
+                                        const threshold = (BAYER_4X4[y & 3][x & 3] - 0.5) * (255 / Math.max(2, rampLen));
+                                        lum = Math.min(255, Math.max(0, lum + threshold));
+                                    }
+
+                                    const clampedLum = Math.min(255, Math.max(0, lum));
+                                    const charIndex = Math.round((clampedLum / 255) * rampLen);
+
+                                    if (useFS) {
+                                        const quantLum = (charIndex / Math.max(1, rampLen)) * 255;
+                                        const err = clampedLum - quantLum;
+                                        if (x + 1 < cols) errBuf[i + 1] += err * (7 / 16);
+                                        if (y + 1 < rows) {
+                                            if (x > 0) errBuf[i + cols - 1] += err * (3 / 16);
+                                            errBuf[i + cols] += err * (5 / 16);
+                                            if (x + 1 < cols) errBuf[i + cols + 1] += err * (1 / 16);
+                                        }
+                                    }
+
+                                    const ch = ramp[charIndex] || ' ';
+                                    const [pr, pg, pb] = applyColorPalette(
+                                        rgbBuf[i * 3], rgbBuf[i * 3 + 1], rgbBuf[i * 3 + 2],
+                                        clampedLum, x, y, cols, rows, now
+                                    );
+                                    rowArr.push({ ch, r: pr, g: pg, b: pb });
+                                }
+                                grid.push(rowArr);
+                            }
+                        }
+                    }
+
+                    // Post-Process Render FX & Interactive Mouse FX
+                    const useColor = state.color || state.colorPalette !== 'mono' || state.detailMode === 'halfblock_hd' || state.mode === 'paint';
+                    const fxElapsed = ((now - state.fxStartTime) / 1000) * state.fxSpeed;
+                    const totalCells = rows * cols;
+                    const scrambleChars = '01#@$%&*+=?/<>ｦｱｳｴｵｶｷｸｹｺ';
+                    const processedGrid = [];
+
+                    const glitchSeed = Math.floor(now / 90);
+                    const scanRow = Math.floor((fxElapsed * 18) % Math.max(1, rows));
+
+                    for (let y = 0; y < rows; y++) {
+                        const outRow = [];
+                        let rowShift = 0;
+                        if (state.fxMode === 'wave') {
+                            rowShift = Math.round(Math.sin(y * 0.35 + fxElapsed * 5) * 4 * state.fxIntensity);
+                        } else if (state.fxMode === 'glitch') {
+                            const h = Math.sin(y * 12.9898 + glitchSeed * 78.233) * 43758.5453;
+                            const frac = h - Math.floor(h);
+                            if (frac < state.fxIntensity * 0.25) {
+                                rowShift = Math.round((frac * 40 - 5) * state.fxIntensity);
+                            }
+                        }
+
+                        for (let x = 0; x < cols; x++) {
+                            let sx = (x - rowShift + cols) % cols;
+                            let sy = y;
+
+                            // Interactive Mouse FX: Magnetic Repel
+                            if (state.mouseFx === 'repel' && state.mouseCol >= 0) {
+                                const dx = x - state.mouseCol;
+                                const dy = (y - state.mouseRow) * 2;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                const radius = 10;
+                                if (dist < radius && dist > 0.1) {
+                                    const push = Math.round(((radius - dist) / radius) * 4);
+                                    sx = Math.max(0, Math.min(cols - 1, Math.round(sx - (dx / dist) * push)));
+                                    sy = Math.max(0, Math.min(rows - 1, Math.round(sy - (dy / dist) * push * 0.5)));
+                                }
+                            }
+
+                            const cell = grid[sy][sx];
+                            let ch = cell.ch;
+                            let r = cell.r, g = cell.g, b = cell.b;
+                            const hasBg = cell.br !== undefined;
+                            let br = cell.br, bg = cell.bg, bb = cell.bb;
+
+                            const cellIdx = y * cols + x;
+
+                            if (state.fxMode === 'typewriter') {
+                                const revealed = Math.floor(fxElapsed * totalCells * 0.45);
+                                if (cellIdx > revealed) ch = ' ';
+                                else if (cellIdx === revealed) ch = '█';
+                            } else if (state.fxMode === 'scramble') {
+                                const progress = Math.min(1, fxElapsed * 0.45);
+                                const threshold = (y / Math.max(1, rows)) * 0.65 + (x / Math.max(1, cols)) * 0.35;
+                                if (progress < threshold && ch !== ' ') {
+                                    ch = scrambleChars[(cellIdx + Math.floor(now / 50)) % scrambleChars.length];
+                                    r = 74; g = 222; b = 128;
+                                }
+                            } else if (state.fxMode === 'scanline') {
+                                const dist = Math.abs(y - scanRow);
+                                if (dist <= 1) {
+                                    r = Math.min(255, r + 110);
+                                    g = Math.min(255, g + 160);
+                                    b = Math.min(255, b + 110);
+                                }
+                            }
+
+                            // Mouse Spotlight Torch
+                            if (state.mouseFx === 'spotlight' && state.mouseCol >= 0) {
+                                const dx = x - state.mouseCol;
+                                const dy = (y - state.mouseRow) * 2;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                const factor = dist < 12 ? 1.35 : Math.max(0.22, 1 - (dist - 12) / 28);
+                                r = Math.min(255, r * factor);
+                                g = Math.min(255, g * factor);
+                                b = Math.min(255, b * factor);
+                            }
+
+                            // Mouse Shockwave Ripple
+                            if (state.mouseFx === 'ripple' && state.mouseClickTime > 0) {
+                                const age = (now - state.mouseClickTime) / 1000;
+                                if (age < 1.8) {
+                                    const dx = x - state.mouseClickCol;
+                                    const dy = (y - state.mouseClickRow) * 2;
+                                    const dist = Math.sqrt(dx * dx + dy * dy);
+                                    const ring = age * 38;
+                                    if (Math.abs(dist - ring) < 2.2) {
+                                        ch = ch === ' ' ? '·' : '█';
+                                        r = 56; g = 189; b = 248;
+                                    }
+                                }
+                            }
+
+                            if (hasBg) {
+                                outRow.push({ ch, r: Math.round(r), g: Math.round(g), b: Math.round(b), br: Math.round(br), bg: Math.round(bg), bb: Math.round(bb) });
+                            } else {
+                                outRow.push({ ch, r: Math.round(r), g: Math.round(g), b: Math.round(b) });
+                            }
+                        }
+                        processedGrid.push(outRow);
+                    }
+
+                    const finalGrid = applyTerminalFrame(processedGrid);
+                    const finalRows = finalGrid.length;
+                    const finalCols = finalGrid[0].length;
+
+                    const plainLines = [];
+                    const htmlLines = [];
+
+                    for (let y = 0; y < finalRows; y++) {
+                        let plainRow = '';
+                        let htmlRow = '';
+                        for (let x = 0; x < finalCols; x++) {
+                            const c = finalGrid[y][x];
+                            plainRow += c.ch;
+                            if (useColor) {
+                                const safeCh = c.ch === '<' ? '&lt;' : c.ch === '>' ? '&gt;' : c.ch === '&' ? '&amp;' : c.ch;
+                                if (c.br !== undefined) {
+                                    htmlRow += `<span style="color:rgb(${c.r},${c.g},${c.b});background-color:rgb(${c.br},${c.bg},${c.bb})">${safeCh}</span>`;
+                                } else {
+                                    htmlRow += `<span style="color:rgb(${c.r},${c.g},${c.b})">${safeCh}</span>`;
+                                }
+                            }
+                        }
+                        plainLines.push(plainRow);
+                        if (useColor) htmlLines.push(htmlRow);
+                    }
+
+                    state.lastFinalGrid = finalGrid;
+                    state.plainAsciiText = plainLines.join('\n');
+                    els.gridDimsLabel.textContent = `${finalCols}×${finalRows}`;
+
+                    if (useColor) {
+                        els.asciiOutput.innerHTML = htmlLines.join('\n');
+                    } else {
+                        els.asciiOutput.style.color = state.tintHex;
+                        els.asciiOutput.textContent = state.plainAsciiText;
+                    }
+                } catch (err) {
+                    console.error('Render error:', err);
+                }
+            }
+
+            // =====================================================================
+            // 8. EXPORT ENGINE (.PNG, .SVG, .HTML, .WebM, .GIF)
+            // =====================================================================
+            function drawAsciiToExportCanvas(canvas, fontSize = 12) {
+                const rows = state.lastFinalGrid;
+                if (!rows.length) return;
+                const numRows = rows.length;
+                const numCols = rows[0].length;
+                const pad = 16;
+                const charWidth = fontSize * 0.62;
+                const lineHeight = fontSize * 1.12;
+
+                canvas.width = Math.ceil(numCols * charWidth + pad * 2);
+                canvas.height = Math.ceil(numRows * lineHeight + pad * 2);
+                const ctx = canvas.getContext('2d');
+
+                ctx.fillStyle = state.canvasBg;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+                ctx.textBaseline = 'top';
+
+                const useColor = state.color || state.colorPalette !== 'mono' || state.detailMode === 'halfblock_hd' || state.mode === 'paint';
+                for (let y = 0; y < numRows; y++) {
+                    const py = pad + y * lineHeight;
+                    if (useColor) {
+                        for (let x = 0; x < numCols; x++) {
+                            const cell = rows[y][x];
+                            const px = pad + x * charWidth;
+                            if (cell.br !== undefined) {
+                                ctx.fillStyle = `rgb(${cell.br},${cell.bg},${cell.bb})`;
+                                ctx.fillRect(px, py, Math.ceil(charWidth + 0.5), Math.ceil(lineHeight + 0.5));
+                            }
+                            ctx.fillStyle = `rgb(${cell.r},${cell.g},${cell.b})`;
+                            ctx.fillText(cell.ch, px, py);
+                        }
+                    } else {
+                        ctx.fillStyle = state.tintHex;
+                        ctx.fillText(rows[y].map(c => c.ch).join(''), pad, py);
+                    }
+                }
+            }
+
+            function downloadAsPng() {
+                drawAsciiToExportCanvas(els.exportCanvas, 14);
+                els.exportCanvas.toBlob(blob => {
+                    if (blob) {
+                        triggerDownload(blob, `ascii-studio-${Date.now()}.png`);
+                        showToast('Exported high-res .PNG!');
+                    }
+                }, 'image/png');
+            }
+
+            function downloadAsSvg() {
+                const rows = state.lastFinalGrid;
+                if (!rows.length) return;
+                const numRows = rows.length;
+                const numCols = rows[0].length;
+                const fontSize = 12;
+                const charW = fontSize * 0.62;
+                const lineH = fontSize * 1.15;
+                const pad = 16;
+                const svgW = Math.ceil(numCols * charW + pad * 2);
+                const svgH = Math.ceil(numRows * lineH + pad * 2);
+                const useColor = state.color || state.colorPalette !== 'mono' || state.detailMode === 'halfblock_hd' || state.mode === 'paint';
+
+                const escXml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                let bgRects = '';
+                let textNodes = '';
+
+                for (let y = 0; y < numRows; y++) {
+                    const py = (pad + (y + 1) * lineH - 3).toFixed(1);
+                    const ry = (pad + y * lineH).toFixed(1);
+                    if (!useColor) {
+                        const line = rows[y].map(c => c.ch).join('');
+                        textNodes += `  <text x="${pad}" y="${py}" fill="${state.tintHex}">${escXml(line)}</text>\n`;
+                    } else {
+                        let spans = '';
+                        let runColor = '';
+                        let runText = '';
+                        for (let x = 0; x < numCols; x++) {
+                            const c = rows[y][x];
+                            if (c.br !== undefined) {
+                                const rx = (pad + x * charW).toFixed(1);
+                                bgRects += `  <rect x="${rx}" y="${ry}" width="${(charW + 0.3).toFixed(1)}" height="${(lineH + 0.3).toFixed(1)}" fill="rgb(${c.br},${c.bg},${c.bb})"/>\n`;
+                            }
+                            const colStr = `rgb(${c.r},${c.g},${c.b})`;
+                            if (colStr === runColor) {
+                                runText += c.ch;
+                            } else {
+                                if (runText) spans += `<tspan fill="${runColor}">${escXml(runText)}</tspan>`;
+                                runColor = colStr;
+                                runText = c.ch;
+                            }
+                        }
+                        if (runText) spans += `<tspan fill="${runColor}">${escXml(runText)}</tspan>`;
+                        textNodes += `  <text x="${pad}" y="${py}">${spans}</text>\n`;
+                    }
+                }
+
+                const svgDoc = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
+  <rect width="100%" height="100%" fill="${state.canvasBg}" rx="12"/>
+${bgRects}  <g font-family="JetBrains Mono, ui-monospace, SFMono-Regular, monospace" font-size="${fontSize}" xml:space="preserve">
+${textNodes}  </g>
+</svg>`;
+                triggerDownload(new Blob([svgDoc], { type: 'image/svg+xml' }), `ascii-studio-${Date.now()}.svg`);
+                showToast('Exported crisp vector .SVG!');
+            }
+
+            function downloadAsHtml() {
+                if (!state.plainAsciiText) return;
+                const useColor = state.color || state.colorPalette !== 'mono' || state.detailMode === 'halfblock_hd' || state.mode === 'paint';
+                const bodyContent = useColor
+                    ? els.asciiOutput.innerHTML
+                    : state.plainAsciiText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+                const doc = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>ASCII Studio Art</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:${state.canvasBg};color:${state.tintHex};}
+pre{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:${state.fontSize}px;line-height:1.05;margin:24px;}</style>
+</head><body><pre>${bodyContent}</pre></body></html>`;
+                triggerDownload(new Blob([doc], { type: 'text/html' }), `ascii-studio-${Date.now()}.html`);
+                showToast('Exported standalone .HTML!');
+            }
+
+            // WebM Video Recorder
+            function toggleWebmRecording() {
+                if (state.isRecordingWebm) {
+                    state.isRecordingWebm = false;
+                    if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+                        state.mediaRecorder.stop();
+                    }
+                    els.recordWebmBtn.textContent = 'Rec .WebM';
+                    return;
+                }
+
+                try {
+                    drawAsciiToExportCanvas(els.exportCanvas, 12);
+                    const stream = els.exportCanvas.captureStream(18);
+                    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                    state.recordedChunks = [];
+                    recorder.ondataavailable = (e) => { if (e.data.size > 0) state.recordedChunks.push(e.data); };
+                    recorder.onstop = () => {
+                        const blob = new Blob(state.recordedChunks, { type: 'video/webm' });
+                        triggerDownload(blob, `ascii-animation-${Date.now()}.webm`);
+                        showToast('Saved .WebM video!');
+                    };
+                    recorder.start();
+                    state.mediaRecorder = recorder;
+                    state.isRecordingWebm = true;
+                    els.recordWebmBtn.textContent = 'Stop Rec';
+                    showToast('Recording .WebM... click Stop Rec to save');
+                } catch (err) {
+                    showToast('WebM recording not supported in this browser');
+                }
+            }
+
+            // Pure-JS Minimal GIF89a Encoder (216 Web-Safe Palette + LZW)
+            function encodeGif89a(frames, width, height, delayCs = 8) {
+                const bytes = [];
+                const writeStr = s => { for (let i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i)); };
+                const writeU16 = v => { bytes.push(v & 0xff, (v >> 8) & 0xff); };
+
+                // Header & Logical Screen Descriptor
+                writeStr('GIF89a');
+                writeU16(width);
+                writeU16(height);
+                bytes.push(0xf7, 0x00, 0x00); // Global color table (256 entries)
+
+                // 256-color palette (6x6x6 web-safe cube + 40 grayscale)
+                for (let r = 0; r < 6; r++) {
+                    for (let g = 0; g < 6; g++) {
+                        for (let b = 0; b < 6; b++) {
+                            bytes.push(Math.round(r * 51), Math.round(g * 51), Math.round(b * 51));
+                        }
+                    }
+                }
+                for (let i = 0; i < 40; i++) {
+                    const v = Math.round((i / 39) * 255);
+                    bytes.push(v, v, v);
+                }
+
+                // Netscape 2.0 Infinite Loop Extension
+                bytes.push(0x21, 0xff, 0x0b);
+                writeStr('NETSCAPE2.0');
+                bytes.push(0x03, 0x01, 0x00, 0x00, 0x00);
+
+                // Encode each frame
+                for (const rgba of frames) {
+                    // Graphic Control Extension
+                    bytes.push(0x21, 0xf9, 0x04, 0x04);
+                    writeU16(delayCs);
+                    bytes.push(0x00, 0x00);
+
+                    // Image Descriptor
+                    bytes.push(0x2c);
+                    writeU16(0); writeU16(0);
+                    writeU16(width); writeU16(height);
+                    bytes.push(0x00);
+
+                    // Quantize pixels to palette index
+                    const indexed = new Uint8Array(width * height);
+                    for (let i = 0; i < width * height; i++) {
+                        const r = Math.round(rgba[i * 4] / 51);
+                        const g = Math.round(rgba[i * 4 + 1] / 51);
+                        const b = Math.round(rgba[i * 4 + 2] / 51);
+                        indexed[i] = r * 36 + g * 6 + b;
+                    }
+
+                    // LZW Compression (min code size 8)
+                    bytes.push(8);
+                    const clearCode = 256, eoiCode = 257;
+                    let codeSize = 9, nextCode = 258;
+                    let dict = new Map();
+                    const subBlock = [];
+                    let bitBuf = 0, bitCount = 0;
+
+                    const emit = (code) => {
+                        bitBuf |= (code << bitCount);
+                        bitCount += codeSize;
+                        while (bitCount >= 8) {
+                            subBlock.push(bitBuf & 0xff);
+                            bitBuf >>= 8;
+                            bitCount -= 8;
+                            if (subBlock.length === 255) {
+                                bytes.push(255, ...subBlock);
+                                subBlock.length = 0;
+                            }
+                        }
+                    };
+
+                    emit(clearCode);
+                    let prefix = indexed[0];
+                    for (let i = 1; i < indexed.length; i++) {
+                        const k = indexed[i];
+                        const key = (prefix << 8) | k;
+                        if (dict.has(key)) {
+                            prefix = dict.get(key);
+                        } else {
+                            emit(prefix);
+                            if (nextCode < 4096) {
+                                dict.set(key, nextCode++);
+                                if (nextCode > (1 << codeSize) && codeSize < 12) codeSize++;
+                            } else {
+                                emit(clearCode);
+                                dict.clear();
+                                codeSize = 9;
+                                nextCode = 258;
+                            }
+                            prefix = k;
+                        }
+                    }
+                    emit(prefix);
+                    emit(eoiCode);
+                    if (bitCount > 0) subBlock.push(bitBuf & 0xff);
+                    if (subBlock.length > 0) bytes.push(subBlock.length, ...subBlock);
+                    bytes.push(0x00); // Block terminator
+                }
+
+                bytes.push(0x3b); // GIF Trailer
+                return new Blob([new Uint8Array(bytes)], { type: 'image/gif' });
+            }
+
+            async function recordAnimatedGif() {
+                if (state.isRecordingGif) return;
+                state.isRecordingGif = true;
+                els.recordGifBtn.textContent = 'Encoding...';
+                showToast('Capturing 24 frames for .GIF...');
+
+                try {
+                    const frames = [];
+                    const tempCanvas = document.createElement('canvas');
+                    let gifW = 0, gifH = 0;
+
+                    for (let f = 0; f < 24; f++) {
+                        renderAscii(performance.now());
+                        drawAsciiToExportCanvas(els.exportCanvas, 10);
+
+                        const scale = Math.min(1, 460 / els.exportCanvas.width);
+                        gifW = Math.max(16, Math.round(els.exportCanvas.width * scale));
+                        gifH = Math.max(16, Math.round(els.exportCanvas.height * scale));
+                        tempCanvas.width = gifW;
+                        tempCanvas.height = gifH;
+                        const tctx = tempCanvas.getContext('2d', { willReadFrequently: true });
+                        tctx.drawImage(els.exportCanvas, 0, 0, gifW, gifH);
+                        frames.push(tctx.getImageData(0, 0, gifW, gifH).data);
+
+                        await new Promise(r => setTimeout(r, 85));
+                    }
+
+                    const gifBlob = encodeGif89a(frames, gifW, gifH, 9);
+                    triggerDownload(gifBlob, `ascii-studio-${Date.now()}.gif`);
+                    showToast('Saved animated .GIF!');
+                } catch (err) {
+                    showToast('GIF export failed');
+                } finally {
+                    state.isRecordingGif = false;
+                    els.recordGifBtn.textContent = 'Rec .GIF';
+                }
+            }
+
+            // =====================================================================
+            // 9. ZOOM, FIT & ANIMATION LOOP
+            // =====================================================================
+            function syncWidthPresetUI() {
+                els.widthPresetBtns.forEach(btn => {
+                    const isActive = parseInt(btn.dataset.width, 10) === state.width;
+                    btn.classList.toggle('border-indigo-500', isActive);
+                    btn.classList.toggle('bg-indigo-500/15', isActive);
+                    btn.classList.toggle('text-indigo-600', isActive);
+                    btn.classList.toggle('dark:text-indigo-300', isActive);
+                    btn.classList.toggle('border-zinc-200', !isActive);
+                    btn.classList.toggle('dark:border-zinc-700', !isActive);
+                    btn.classList.toggle('bg-zinc-50', !isActive);
+                    btn.classList.toggle('dark:bg-zinc-800/70', !isActive);
+                });
+            }
+
+            function applyFontSize(px) {
+                const rounded = Math.round(px * 2) / 2;
+                state.fontSize = Math.max(1.5, Math.min(28, rounded));
+                els.asciiOutput.style.fontSize = `${state.fontSize}px`;
+                els.fontSizeLabel.textContent = `${state.fontSize}px`;
+            }
+
+            function fitAsciiToViewport() {
+                if (!state.lastFinalGrid.length) return;
+                const cols = state.lastFinalGrid[0].length;
+                const rows = state.lastFinalGrid.length;
+                const availW = Math.max(160, els.previewStage.clientWidth - 36);
+                const availH = Math.max(140, els.previewStage.clientHeight - 36);
+                const sizeByW = availW / (cols * 0.62);
+                const sizeByH = availH / (rows * 1.08);
+                const best = Math.floor(Math.min(sizeByW, sizeByH) * 2) / 2;
+                applyFontSize(best);
+            }
+
+            function fitAsciiToViewport() {
+                if (!state.lastFinalGrid.length) return;
+                const cols = state.lastFinalGrid[0].length;
+                const rows = state.lastFinalGrid.length;
+                const availW = Math.max(160, els.previewStage.clientWidth - 36);
+                const availH = Math.max(140, els.previewStage.clientHeight - 36);
+                const sizeByW = availW / (cols * 0.62);
+                const sizeByH = availH / (rows * 1.08);
+                applyFontSize(Math.floor(Math.min(sizeByW, sizeByH)));
+            }
+
+            let lastLoopRender = 0;
+            function animationLoop(now) {
+                const needsContinuous =
+                    (state.mode === 'animate' && state.animPlaying) ||
+                    (state.mode === 'camera' && state.camActive && !state.camFrozen) ||
+                    state.fxMode !== 'none' ||
+                    state.colorPalette === 'rainbow' ||
+                    (state.mouseFx === 'ripple' && now - state.mouseClickTime < 1900);
+
+                const frameInterval = 1000 / Math.max(8, state.animFps);
+                if (needsContinuous && now - lastLoopRender >= frameInterval) {
+                    lastLoopRender = now;
+                    renderAscii(now);
+                    if (state.isRecordingWebm) {
+                        drawAsciiToExportCanvas(els.exportCanvas, 12);
+                    }
+                }
+                requestAnimationFrame(animationLoop);
+            }
+
+            // =====================================================================
+            // 10. MODE SWITCHING & WEBCAM
+            // =====================================================================
+            function stopWebcam() {
+                if (state.camStream) {
+                    state.camStream.getTracks().forEach(t => t.stop());
+                    state.camStream = null;
+                }
+                state.camActive = false;
+                state.camFrozen = false;
+                els.camToggleBtn.textContent = 'Start Camera';
+                els.camToggleBtn.classList.remove('bg-rose-600', 'hover:bg-rose-500');
+                els.camToggleBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+            }
+
+            function switchMode(newMode) {
+                if (state.mode === 'camera' && newMode !== 'camera') stopWebcam();
+                state.mode = newMode;
+
+                els.modeTabs.forEach(tab => {
+                    const active = tab.dataset.mode === newMode;
+                    tab.classList.toggle('bg-indigo-600', active);
+                    tab.classList.toggle('text-white', active);
+                    tab.classList.toggle('shadow-sm', active);
+                    tab.classList.toggle('text-zinc-600', !active);
+                    tab.classList.toggle('dark:text-zinc-400', !active);
+                });
+
+                els.panelImage.classList.toggle('hidden', newMode !== 'image');
+                els.panelText.classList.toggle('hidden', newMode !== 'text');
+                els.panelAnimate.classList.toggle('hidden', newMode !== 'animate');
+                els.panelCamera.classList.toggle('hidden', newMode !== 'camera');
+                els.panelPaint.classList.toggle('hidden', newMode !== 'paint');
+
+                const titles = {
+                    image: ['Source Image', 'PHOTO'],
+                    text: ['Text Banner', 'BANNER'],
+                    animate: ['Animation & Video', 'LIVE FX'],
+                    camera: ['Live Webcam', 'CAM'],
+                    paint: ['ASCII Paint Studio', 'BRUSH']
+                };
+                els.sourcePanelTitle.textContent = titles[newMode][0];
+                els.sourceBadge.textContent = titles[newMode][1];
+                els.asciiOutput.classList.toggle('paint-cursor', newMode === 'paint');
+
+                if (newMode === 'image' && !state.hasCustomImage) {
+                    drawSampleArtwork(state.sampleName);
+                }
+                renderAscii();
+            }
+
+            function handleImageFile(file) {
+                if (!file || !file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const maxDim = 960;
+                        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+                        els.sourceCanvas.width = Math.round(img.width * scale);
+                        els.sourceCanvas.height = Math.round(img.height * scale);
+                        els.sourceCanvas.getContext('2d').drawImage(img, 0, 0, els.sourceCanvas.width, els.sourceCanvas.height);
+                        state.hasCustomImage = true;
+                        renderAscii();
+                        fitAsciiToViewport();
+                        showToast(`Loaded ${file.name}`);
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // =====================================================================
+            // 11. EVENT LISTENERS
+            // =====================================================================
+            function bindEvents() {
+                // Mode tabs
+                els.modeTabs.forEach(tab => tab.addEventListener('click', () => switchMode(tab.dataset.mode)));
+
+                // Theme toggle
+                els.themeToggleBtn.addEventListener('click', () => {
+                    document.documentElement.classList.toggle('dark');
+                });
+
+                // Sidebar Zen Mode toggle
+                els.toggleSidebarBtn.addEventListener('click', () => {
+                    els.leftSidebar.classList.toggle('md:hidden');
+                });
+
+                // Image upload & drag-and-drop
+                els.dropZone.addEventListener('click', () => els.imageFileInput.click());
+                els.imageFileInput.addEventListener('change', (e) => handleImageFile(e.target.files[0]));
+                els.dropZone.addEventListener('dragover', (e) => { e.preventDefault(); els.dropZone.classList.add('border-indigo-500'); });
+                els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('border-indigo-500'));
+                els.dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    els.dropZone.classList.remove('border-indigo-500');
+                    handleImageFile(e.dataTransfer.files[0]);
+                });
+
+                // Sample artworks
+                els.sampleBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        state.sampleName = btn.dataset.sample;
+                        state.hasCustomImage = false;
+                        drawSampleArtwork(state.sampleName);
+                        renderAscii();
+                    });
+                });
+
+                // Quick Image Transforms
+                els.flipHBtn.addEventListener('click', () => transformSourceImage('flipH'));
+                els.flipVBtn.addEventListener('click', () => transformSourceImage('flipV'));
+                els.rotateCwBtn.addEventListener('click', () => transformSourceImage('rotateCw'));
+                els.cropSquareBtn.addEventListener('click', () => transformSourceImage('cropSquare'));
+
+                // 1-Click Photo Detail Presets
+                els.photoPresetBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const preset = btn.dataset.photoPreset;
+                        state.detailMode = preset;
+                        els.detailModeSelect.value = preset;
+
+                        if (preset === 'photo_hd') {
+                            state.width = 160;
+                            state.sharpen = 0.45;
+                            state.contrast = 1.15;
+                            state.charsetKey = 'detailed';
+                            els.charsetPreset.value = 'detailed';
+                        } else if (preset === 'braille_hd') {
+                            state.width = 110;
+                            state.sharpen = 0.55;
+                            state.contrast = 1.20;
+                        } else if (preset === 'halfblock_hd') {
+                            state.width = 130;
+                            state.sharpen = 0.35;
+                            state.contrast = 1.10;
+                            state.color = true;
+                            state.colorPalette = 'original';
+                            els.colorToggle.checked = true;
+                            els.colorPaletteSelect.value = 'original';
+                            els.tintSelectorWrap.classList.add('opacity-40', 'pointer-events-none');
+                        }
+
+                        els.widthSlider.value = state.width;
+                        els.widthValue.textContent = state.width;
+                        syncWidthPresetUI();
+                        els.sharpenSlider.value = Math.round(state.sharpen * 100);
+                        els.sharpenValue.textContent = `${Math.round(state.sharpen * 100)}%`;
+                        els.contrastSlider.value = state.contrast;
+                        els.contrastValue.textContent = state.contrast.toFixed(2);
+
+                        renderAscii();
+                        fitAsciiToViewport();
+                        showToast(`Switched to ${btn.textContent.trim()} mode!`);
+                    });
+                });
+
+                // Text Banner
+                els.bannerTextInput.addEventListener('input', (e) => { state.bannerText = e.target.value; renderAscii(); });
+                els.bannerFontSelect.addEventListener('change', (e) => { state.bannerFont = e.target.value; renderAscii(); });
+                els.bannerStyleSelect.addEventListener('change', (e) => { state.bannerStyle = e.target.value; renderAscii(); });
+
+                // Animation & Video
+                els.animPresetBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        state.animPreset = btn.dataset.anim;
+                        state.hasCustomVideo = false;
+                        els.hiddenVideo.pause();
+                        els.animPresetBtns.forEach(b => b.classList.remove('border-indigo-500', 'bg-indigo-500/15', 'text-indigo-600', 'dark:text-indigo-300'));
+                        btn.classList.add('border-indigo-500', 'bg-indigo-500/15', 'text-indigo-600', 'dark:text-indigo-300');
+                        renderAscii();
+                    });
+                });
+                els.animPlayPauseBtn.addEventListener('click', () => {
+                    state.animPlaying = !state.animPlaying;
+                    els.animPlayPauseBtn.textContent = state.animPlaying ? 'Pause Animation' : 'Play Animation';
+                    if (state.hasCustomVideo) {
+                        if (state.animPlaying) els.hiddenVideo.play(); else els.hiddenVideo.pause();
+                    }
+                });
+                els.videoFileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    els.hiddenVideo.src = URL.createObjectURL(file);
+                    els.hiddenVideo.play();
+                    state.hasCustomVideo = true;
+                    state.animPlaying = true;
+                    els.animPlayPauseBtn.textContent = 'Pause Animation';
+                    showToast(`Playing video: ${file.name}`);
+                });
+                els.fpsSlider.addEventListener('input', (e) => {
+                    state.animFps = parseInt(e.target.value, 10);
+                    els.fpsValue.textContent = `${state.animFps} FPS`;
+                });
+
+                // Webcam
+                els.camToggleBtn.addEventListener('click', async () => {
+                    if (state.camActive) {
+                        stopWebcam();
+                        return;
+                    }
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                        state.camStream = stream;
+                        els.webcamVideo.srcObject = stream;
+                        await els.webcamVideo.play();
+                        state.camActive = true;
+                        state.camFrozen = false;
+                        els.camToggleBtn.textContent = 'Stop Camera';
+                        els.camToggleBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+                        els.camToggleBtn.classList.add('bg-rose-600', 'hover:bg-rose-500');
+                        showToast('Webcam active!');
+                    } catch (err) {
+                        showToast('Camera permission denied or unavailable');
+                    }
+                });
+                els.camFreezeBtn.addEventListener('click', () => {
+                    if (!state.camActive) return;
+                    state.camFrozen = !state.camFrozen;
+                    els.camFreezeBtn.textContent = state.camFrozen ? 'Unfreeze' : 'Freeze';
+                });
+                els.camMirrorToggle.addEventListener('change', (e) => { state.camMirror = e.target.checked; });
+
+                // Paint Tools
+                els.paintToolBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        state.paintTool = btn.dataset.tool;
+                        els.paintToolBtns.forEach(b => {
+                            b.classList.remove('bg-indigo-600', 'text-white');
+                            b.classList.add('border', 'border-zinc-200', 'dark:border-zinc-700', 'bg-zinc-50', 'dark:bg-zinc-800');
+                        });
+                        btn.classList.add('bg-indigo-600', 'text-white');
+                        btn.classList.remove('border', 'border-zinc-200', 'dark:border-zinc-700', 'bg-zinc-50', 'dark:bg-zinc-800');
+                    });
+                });
+                els.paintCharInput.addEventListener('input', (e) => { state.paintChar = e.target.value || '#'; });
+                els.paintSizeSelect.addEventListener('change', (e) => { state.paintSize = parseInt(e.target.value, 10); });
+                els.paintColorInput.addEventListener('input', (e) => { state.paintColor = e.target.value; });
+                els.quickCharBtns.forEach(btn => btn.addEventListener('click', () => {
+                    state.paintChar = btn.textContent;
+                    els.paintCharInput.value = btn.textContent;
+                }));
+                els.paintUndoBtn.addEventListener('click', () => {
+                    if (!state.paintUndoStack.length) return;
+                    state.paintRedoStack.push(cloneGrid(state.paintGrid));
+                    state.paintGrid = state.paintUndoStack.pop();
+                    renderAscii();
+                });
+                els.paintRedoBtn.addEventListener('click', () => {
+                    if (!state.paintRedoStack.length) return;
+                    state.paintUndoStack.push(cloneGrid(state.paintGrid));
+                    state.paintGrid = state.paintRedoStack.pop();
+                    renderAscii();
+                });
+                els.paintClearBtn.addEventListener('click', () => {
+                    pushPaintUndo();
+                    initPaintGrid(state.paintCols, state.paintRows);
+                    renderAscii();
+                });
+                els.paintImportBtn.addEventListener('click', () => {
+                    if (!state.lastFinalGrid.length) return;
+                    pushPaintUndo();
+                    state.paintGrid = cloneGrid(state.lastFinalGrid);
+                    state.paintRows = state.paintGrid.length;
+                    state.paintCols = state.paintGrid[0].length;
+                    renderAscii();
+                    showToast('Imported ASCII into Paint canvas!');
+                });
+
+                // Paint & Mouse FX on ASCII output
+                const onPointerDown = (e) => {
+                    const pos = getCellCoordsFromEvent(e);
+                    if (!pos) return;
+                    if (state.mouseFx === 'ripple') {
+                        state.mouseClickCol = pos.col;
+                        state.mouseClickRow = pos.row;
+                        state.mouseClickTime = performance.now();
+                        renderAscii();
+                    }
+                    if (state.mode !== 'paint') return;
+                    e.preventDefault();
+                    pushPaintUndo();
+                    state.paintDrawing = true;
+                    state.paintStart = pos;
+                    const rgb = hexToRgb(state.paintColor);
+                    const ch = state.paintTool === 'eraser' ? ' ' : state.paintChar;
+                    if (state.paintTool === 'fill') {
+                        paintFloodFill(state.paintGrid, pos.col, pos.row, ch, rgb);
+                        state.paintDrawing = false;
+                        renderAscii();
+                    } else if (state.paintTool === 'brush' || state.paintTool === 'eraser') {
+                        paintStamp(state.paintGrid, pos.col, pos.row, ch, rgb, state.paintSize);
+                        renderAscii();
+                    }
+                };
+                const onPointerMove = (e) => {
+                    const pos = getCellCoordsFromEvent(e);
+                    if (!pos) return;
+                    state.mouseCol = pos.col;
+                    state.mouseRow = pos.row;
+                    if (state.mouseFx !== 'none' && state.mode !== 'paint') renderAscii();
+                    if (state.mode !== 'paint' || !state.paintDrawing) return;
+                    e.preventDefault();
+                    const rgb = hexToRgb(state.paintColor);
+                    const ch = state.paintTool === 'eraser' ? ' ' : state.paintChar;
+                    if (state.paintTool === 'brush' || state.paintTool === 'eraser') {
+                        paintStamp(state.paintGrid, pos.col, pos.row, ch, rgb, state.paintSize);
+                        renderAscii();
+                    } else if (state.paintTool === 'line' || state.paintTool === 'box') {
+                        const preview = cloneGrid(state.paintGrid);
+                        if (state.paintTool === 'line') paintLine(preview, state.paintStart.col, state.paintStart.row, pos.col, pos.row, ch, rgb, state.paintSize);
+                        else paintBox(preview, state.paintStart.col, state.paintStart.row, pos.col, pos.row, ch, rgb);
+                        state.paintPreviewGrid = preview;
+                        renderAscii();
+                    }
+                };
+                const onPointerUp = () => {
+                    if (state.paintDrawing && state.paintPreviewGrid) {
+                        state.paintGrid = state.paintPreviewGrid;
+                        state.paintPreviewGrid = null;
+                        renderAscii();
+                    }
+                    state.paintDrawing = false;
+                };
+
+                els.asciiOutput.addEventListener('mousedown', onPointerDown);
+                window.addEventListener('mousemove', onPointerMove);
+                window.addEventListener('mouseup', onPointerUp);
+                els.asciiOutput.addEventListener('touchstart', onPointerDown, { passive: false });
+                els.asciiOutput.addEventListener('touchmove', onPointerMove, { passive: false });
+                window.addEventListener('touchend', onPointerUp);
+                els.asciiOutput.addEventListener('mouseleave', () => {
+                    state.mouseCol = -999;
+                    state.mouseRow = -999;
+                    if (state.mouseFx !== 'none') renderAscii();
+                });
+
+                // Render Detail Engine & ASCII settings
+                els.detailModeSelect.addEventListener('change', (e) => {
+                    state.detailMode = e.target.value;
+                    if (state.detailMode === 'halfblock_hd' && !state.color && state.colorPalette === 'mono') {
+                        state.color = true;
+                        state.colorPalette = 'original';
+                        els.colorToggle.checked = true;
+                        els.colorPaletteSelect.value = 'original';
+                        els.tintSelectorWrap.classList.add('opacity-40', 'pointer-events-none');
+                    }
+                    renderAscii();
+                });
+
+                els.charsetPreset.addEventListener('change', (e) => {
+                    state.charsetKey = e.target.value;
+                    els.customCharsetInput.classList.toggle('hidden', state.charsetKey !== 'custom');
+                    renderAscii();
+                });
+                els.customCharsetInput.addEventListener('input', (e) => { state.customCharset = e.target.value; renderAscii(); });
+
+                els.widthSlider.addEventListener('input', (e) => {
+                    state.width = parseInt(e.target.value, 10);
+                    els.widthValue.textContent = state.width;
+                    syncWidthPresetUI();
+                    renderAscii();
+                    fitAsciiToViewport();
+                });
+                els.widthPresetBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        state.width = parseInt(btn.dataset.width, 10);
+                        els.widthSlider.value = state.width;
+                        els.widthValue.textContent = state.width;
+                        syncWidthPresetUI();
+                        renderAscii();
+                        fitAsciiToViewport();
+                    });
+                });
+
+                els.aspectSlider.addEventListener('input', (e) => {
+                    state.aspect = parseFloat(e.target.value);
+                    els.aspectValue.textContent = state.aspect.toFixed(2);
+                    renderAscii();
+                });
+                els.contrastSlider.addEventListener('input', (e) => {
+                    state.contrast = parseFloat(e.target.value);
+                    els.contrastValue.textContent = state.contrast.toFixed(2);
+                    renderAscii();
+                });
+                els.brightnessSlider.addEventListener('input', (e) => {
+                    state.brightness = parseInt(e.target.value, 10);
+                    els.brightnessValue.textContent = state.brightness;
+                    renderAscii();
+                });
+                els.sharpenSlider.addEventListener('input', (e) => {
+                    state.sharpen = parseInt(e.target.value, 10) / 100;
+                    els.sharpenValue.textContent = `${e.target.value}%`;
+                    renderAscii();
+                });
+
+                els.invertToggle.addEventListener('change', (e) => { state.invert = e.target.checked; renderAscii(); });
+                els.ditherToggle.addEventListener('change', (e) => { state.dither = e.target.checked; renderAscii(); });
+                els.edgeToggle.addEventListener('change', (e) => { state.edgeDetect = e.target.checked; renderAscii(); });
+                els.crtToggle.addEventListener('change', (e) => {
+                    state.crt = e.target.checked;
+                    els.crtOverlay.classList.toggle('hidden', !state.crt);
+                });
+
+                // Color & Canvas themes
+                els.colorToggle.addEventListener('change', (e) => {
+                    state.color = e.target.checked;
+                    if (state.color && state.colorPalette === 'mono') {
+                        state.colorPalette = 'original';
+                        els.colorPaletteSelect.value = 'original';
+                    } else if (!state.color && state.colorPalette === 'original') {
+                        state.colorPalette = 'mono';
+                        els.colorPaletteSelect.value = 'mono';
+                    }
+                    els.tintSelectorWrap.classList.toggle('opacity-40', state.colorPalette !== 'mono');
+                    els.tintSelectorWrap.classList.toggle('pointer-events-none', state.colorPalette !== 'mono');
+                    renderAscii();
+                });
+                els.colorPaletteSelect.addEventListener('change', (e) => {
+                    state.colorPalette = e.target.value;
+                    state.color = state.colorPalette !== 'mono';
+                    els.colorToggle.checked = state.color;
+                    els.tintSelectorWrap.classList.toggle('opacity-40', state.colorPalette !== 'mono');
+                    els.tintSelectorWrap.classList.toggle('pointer-events-none', state.colorPalette !== 'mono');
+                    renderAscii();
+                });
+                els.tintBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        state.tintHex = btn.dataset.tint;
+                        els.tintBtns.forEach(b => b.classList.remove('ring-2', 'ring-indigo-500', 'ring-offset-2', 'ring-offset-white', 'dark:ring-offset-zinc-900'));
+                        btn.classList.add('ring-2', 'ring-indigo-500', 'ring-offset-2', 'ring-offset-white', 'dark:ring-offset-zinc-900');
+                        renderAscii();
+                    });
+                });
+                els.bgThemeBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        state.canvasBg = btn.dataset.bg;
+                        els.previewStage.style.backgroundColor = state.canvasBg;
+                        els.bgThemeBtns.forEach(b => b.classList.remove('border-indigo-500'));
+                        btn.classList.add('border-indigo-500');
+                        if (state.canvasBg === '#fafaf9' && state.tintHex === '#e4e4e7') {
+                            state.tintHex = '#18181b';
+                            renderAscii();
+                        } else if (state.canvasBg !== '#fafaf9' && state.tintHex === '#18181b') {
+                            state.tintHex = '#e4e4e7';
+                            renderAscii();
+                        }
+                    });
+                });
+
+                // Render FX & Mouse FX
+                els.fxModeSelect.addEventListener('change', (e) => {
+                    state.fxMode = e.target.value;
+                    state.fxStartTime = performance.now();
+                    renderAscii();
+                });
+                els.mouseFxSelect.addEventListener('change', (e) => { state.mouseFx = e.target.value; renderAscii(); });
+                els.fxSpeedSlider.addEventListener('input', (e) => {
+                    state.fxSpeed = parseFloat(e.target.value);
+                    els.fxSpeedValue.textContent = `${state.fxSpeed.toFixed(1)}×`;
+                });
+                els.fxIntensitySlider.addEventListener('input', (e) => {
+                    state.fxIntensity = parseInt(e.target.value, 10) / 100;
+                    els.fxIntensityValue.textContent = `${e.target.value}%`;
+                });
+                els.replayFxBtn.addEventListener('click', () => {
+                    state.fxStartTime = performance.now();
+                    renderAscii();
+                });
+
+                // Frame & Watermark
+                els.frameStyleSelect.addEventListener('change', (e) => { state.frameStyle = e.target.value; renderAscii(); });
+                els.watermarkInput.addEventListener('input', (e) => { state.watermark = e.target.value; renderAscii(); });
+
+                // Zoom & Fit
+                els.zoomOutBtn.addEventListener('click', () => applyFontSize(state.fontSize - (state.fontSize <= 6 ? 0.5 : 1)));
+                els.zoomInBtn.addEventListener('click', () => applyFontSize(state.fontSize + (state.fontSize < 6 ? 0.5 : 1)));
+                els.fitScreenBtn.addEventListener('click', fitAsciiToViewport);
+
+                // Copy & Exports
+                els.copyBtn.addEventListener('click', () => {
+                    if (!state.plainAsciiText) return;
+                    copyTextToClipboard(state.plainAsciiText, 'Copied plain ASCII to clipboard!');
+                });
+                els.copyCodeBlockBtn.addEventListener('click', () => {
+                    if (!state.plainAsciiText) return;
+                    const trimmed = state.plainAsciiText.split('\n').map(l => l.replace(/\s+$/, '')).join('\n');
+                    copyTextToClipboard('```\n' + trimmed + '\n```', 'Copied ``` code block (ready for WA/Discord)!');
+                });
+                els.downloadTxtBtn.addEventListener('click', () => {
+                    if (!state.plainAsciiText) return;
+                    triggerDownload(new Blob([state.plainAsciiText], { type: 'text/plain;charset=utf-8' }), `ascii-studio-${Date.now()}.txt`);
+                    showToast('Exported .TXT file!');
+                });
+                els.downloadPngBtn.addEventListener('click', downloadAsPng);
+                els.downloadSvgBtn.addEventListener('click', downloadAsSvg);
+                els.downloadHtmlBtn.addEventListener('click', downloadAsHtml);
+                els.recordWebmBtn.addEventListener('click', toggleWebmRecording);
+                els.recordGifBtn.addEventListener('click', recordAnimatedGif);
+
+                // Reset All Settings
+                els.resetSettingsBtn.addEventListener('click', () => {
+                    state.detailMode = 'standard';
+                    state.charsetKey = 'standard';
+                    state.width = 90;
+                    state.aspect = 0.50;
+                    state.contrast = 1.10;
+                    state.brightness = 0;
+                    state.sharpen = 0;
+                    state.invert = false;
+                    state.dither = false;
+                    state.edgeDetect = false;
+                    state.crt = false;
+                    state.color = false;
+                    state.colorPalette = 'mono';
+                    state.fxMode = 'none';
+                    state.mouseFx = 'none';
+                    state.frameStyle = 'none';
+                    state.watermark = '';
+
+                    els.detailModeSelect.value = 'standard';
+                    els.charsetPreset.value = 'standard';
+                    els.customCharsetInput.classList.add('hidden');
+                    els.widthSlider.value = 90; els.widthValue.textContent = '90';
+                    syncWidthPresetUI();
+                    els.aspectSlider.value = 0.50; els.aspectValue.textContent = '0.50';
+                    els.contrastSlider.value = 1.10; els.contrastValue.textContent = '1.10';
+                    els.brightnessSlider.value = 0; els.brightnessValue.textContent = '0';
+                    els.sharpenSlider.value = 0; els.sharpenValue.textContent = '0%';
+                    els.invertToggle.checked = false;
+                    els.ditherToggle.checked = false;
+                    els.edgeToggle.checked = false;
+                    els.crtToggle.checked = false;
+                    els.crtOverlay.classList.add('hidden');
+                    els.colorToggle.checked = false;
+                    els.colorPaletteSelect.value = 'mono';
+                    els.tintSelectorWrap.classList.remove('opacity-40', 'pointer-events-none');
+                    els.fxModeSelect.value = 'none';
+                    els.mouseFxSelect.value = 'none';
+                    els.frameStyleSelect.value = 'none';
+                    els.watermarkInput.value = '';
+
+                    renderAscii();
+                    fitAsciiToViewport();
+                    showToast('All settings reset!');
+                });
+            }
+
+            // =====================================================================
+            // 12. INITIALIZATION
+            // =====================================================================
+            initPaintGrid();
+            drawSampleArtwork(state.sampleName);
+            bindEvents();
+            syncWidthPresetUI();
+            renderAscii();
+            setTimeout(fitAsciiToViewport, 80);
+            requestAnimationFrame(animationLoop);
+        });
+    </script>
+</body>
+</html>
