@@ -1,0 +1,5 @@
+{
+  "name": "ASCII Studio Pro",
+  "description": "Transform images, text banners, procedural animations, video, live camera/screen feeds, ASCII paint flipbooks, and interactive 3D models into expressive ASCII art with HD rendering and multi-format export.",
+  "requestFramePermissions": ["camera", "microphone"]
+}
