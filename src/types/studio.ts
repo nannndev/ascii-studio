@@ -1,4 +1,11 @@
-export type StudioMode = 'image' | 'text' | 'animate' | 'camera' | 'paint' | '3d';
+export type StudioMode =
+  | 'image'
+  | 'flowers'
+  | 'text'
+  | 'animate'
+  | 'camera'
+  | 'paint'
+  | '3d';
 
 export type DetailMode = 'standard' | 'photo_hd' | 'braille_hd' | 'halfblock_hd';
 
@@ -49,6 +56,77 @@ export type AnimPreset = 'orbit' | 'plasma' | 'rain' | 'radar' | 'bars' | 'cube'
 export type PaintTool = 'brush' | 'eraser' | 'line' | 'box' | 'fill';
 
 export type Object3DType = 'donut' | 'globe' | 'knot' | 'pyramid';
+
+export type FlowerTemplateId =
+  | 'rose'
+  | 'lotus'
+  | 'sakura'
+  | 'sunflower'
+  | 'tulip'
+  | 'daisy'
+  | 'orchid'
+  | 'hibiscus'
+  | 'dandelion'
+  | 'bonsai'
+  | 'bouquet'
+  | 'neon_lily';
+
+export type FlowerDimension = '3d' | '2d';
+
+export type FlowerArrangement = 'single' | 'bouquet' | 'vase' | 'dome';
+
+export type FlowerQuality = 'std' | 'hd' | '4k';
+
+export type FlowerAtmosphere =
+  | 'none'
+  | 'petals'
+  | 'fireflies'
+  | 'rain'
+  | 'snow'
+  | 'starlight';
+
+export type PosterAspectRatio = 'story_9_16' | 'square_1_1' | 'desktop_16_9';
+
+export type FlowerStyleId =
+  | 'colorful'
+  | 'monochrome'
+  | 'pastel'
+  | 'neon'
+  | 'golden'
+  | 'sumie'
+  | 'sunset'
+  | 'matrix';
+
+export interface FlowerConfig {
+  template: FlowerTemplateId;
+  dimension: FlowerDimension;
+  arrangement: FlowerArrangement;
+  quality: FlowerQuality;
+  style: FlowerStyleId;
+  bloom: number; // 0.15 to 1.0
+  petalCount: number; // 5 to 20
+  showStem: boolean;
+  atmosphere: FlowerAtmosphere;
+  windSway: boolean;
+  autoBloom: boolean;
+  autoSpin: boolean;
+  audioBloom: boolean;
+
+  // Custom color overrides
+  customColorsEnabled: boolean;
+  customPetalHex: string;
+  customRibbonHex: string;
+  customWrapHex: string;
+
+  // ASCII Gift Card overlay
+  giftCardEnabled: boolean;
+  giftTitle: string;
+  giftMessage: string;
+  giftSender: string;
+
+  // Name-to-Flower DNA seed
+  dnaName: string;
+}
 
 export type ImageTransformAction = 'flipH' | 'flipV' | 'rotateCw' | 'cropSquare';
 
@@ -141,6 +219,9 @@ export interface ModeSpecificState {
   // 3D mode
   obj3d: Object3DType;
   autoSpin3d: boolean;
+
+  // Flower Arts mode
+  flower: FlowerConfig;
 }
 
 export interface AudioState {

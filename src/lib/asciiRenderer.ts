@@ -526,6 +526,90 @@ export function applyTerminalFrame(
   return out;
 }
 
+export function applyFlowerGiftCardFrame(
+  grid: AsciiGrid,
+  titleRaw: string,
+  messageRaw: string,
+  senderRaw: string,
+  tintHex: string
+): AsciiGrid {
+  if (!grid.length || !grid[0].length) return grid;
+
+  const innerCols = grid[0].length;
+  const tint = hexToRgb(tintHex);
+  const mk = (
+    ch: string,
+    r = tint.r,
+    g = tint.g,
+    b = tint.b
+  ): AsciiCell => ({ ch, r, g, b });
+
+  const makeCenteredTextRow = (text: string, accent = false): AsciiCell[] => {
+    const row: AsciiCell[] = [mk('║')];
+    for (let x = 0; x < innerCols; x++) row.push(mk(' '));
+    row.push(mk('║'));
+
+    const clipped = text.trim().slice(0, Math.max(0, innerCols - 4));
+    if (clipped.length > 0) {
+      const start = Math.floor((innerCols - clipped.length) / 2) + 1;
+      for (let i = 0; i < clipped.length; i++) {
+        row[start + i] = accent
+          ? mk(clipped[i], Math.min(255, tint.r + 35), Math.min(255, tint.g + 25), Math.min(255, tint.b + 25))
+          : mk(clipped[i]);
+      }
+    }
+    return row;
+  };
+
+  const out: AsciiGrid = [];
+  const title = titleRaw.trim();
+  const message = messageRaw.trim();
+  const sender = senderRaw.trim();
+
+  // Top ornate floral border
+  const topRow: AsciiCell[] = [mk('╔')];
+  for (let x = 0; x < innerCols; x++) topRow.push(mk('═'));
+  topRow.push(mk('╗'));
+  if (title && innerCols > 10) {
+    const header = ` ✿ ${title.slice(0, Math.max(4, innerCols - 10))} ✿ `;
+    const start = Math.floor((innerCols - header.length) / 2) + 1;
+    for (let i = 0; i < header.length; i++) {
+      if (start + i >= 1 && start + i <= innerCols) {
+        topRow[start + i] = mk(header[i]);
+      }
+    }
+  }
+  out.push(topRow);
+
+  // Main artwork rows
+  for (let y = 0; y < grid.length; y++) {
+    out.push([mk('║'), ...grid[y], mk('║')]);
+  }
+
+  // Optional Gift Card footer section
+  if (message || sender) {
+    const divRow: AsciiCell[] = [mk('╟')];
+    for (let x = 0; x < innerCols; x++) divRow.push(mk('─'));
+    divRow.push(mk('╢'));
+    out.push(divRow);
+
+    if (message) {
+      out.push(makeCenteredTextRow(message, true));
+    }
+    if (sender) {
+      out.push(makeCenteredTextRow(`— ${sender} —`, false));
+    }
+  }
+
+  // Bottom border
+  const botRow: AsciiCell[] = [mk('╚')];
+  for (let x = 0; x < innerCols; x++) botRow.push(mk('═'));
+  botRow.push(mk('╝'));
+  out.push(botRow);
+
+  return out;
+}
+
 export function gridToPlainAndHtml(
   finalGrid: AsciiGrid,
   useColor: boolean

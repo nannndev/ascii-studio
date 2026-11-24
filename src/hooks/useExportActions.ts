@@ -5,10 +5,17 @@ import {
   buildSvgDocument,
   copyTextToClipboard,
   drawAsciiToCanvas,
+  drawPosterToCanvas,
   encodeGif89a,
   triggerDownload,
 } from '../lib/exporters';
-import type { AsciiGrid, ModeSpecificState, StudioMode, StudioSettings } from '../types/studio';
+import type {
+  AsciiGrid,
+  ModeSpecificState,
+  PosterAspectRatio,
+  StudioMode,
+  StudioSettings,
+} from '../types/studio';
 import type { PaintRuntimeRef } from './usePaintFlipbook';
 
 interface UseExportActionsParams {
@@ -100,6 +107,28 @@ export function useExportActions({
       }
     }, 'image/png');
   }, [exportCanvasRef, getLastGrid, getMode, getSettings, showToast]);
+
+  const downloadPoster = useCallback(
+    (aspect: PosterAspectRatio) => {
+      const canvas = exportCanvasRef.current;
+      const grid = getLastGrid();
+      if (!canvas || !grid.length) return;
+      drawPosterToCanvas(canvas, grid, getSettings(), getMode(), aspect);
+      const label =
+        aspect === 'story_9_16'
+          ? 'story-9x16'
+          : aspect === 'square_1_1'
+          ? 'square-1x1'
+          : 'wallpaper-16x9';
+      canvas.toBlob((blob) => {
+        if (blob) {
+          triggerDownload(blob, `ascii-flower-${label}-${Date.now()}.png`);
+          showToast(`Exported ${label.toUpperCase()} PNG wallpaper`);
+        }
+      }, 'image/png');
+    },
+    [exportCanvasRef, getLastGrid, getMode, getSettings, showToast]
+  );
 
   const downloadSvg = useCallback(() => {
     const grid = getLastGrid();
@@ -248,6 +277,7 @@ export function useExportActions({
     downloadTxt,
     downloadAnsi,
     downloadPng,
+    downloadPoster,
     downloadSvg,
     downloadHtml,
     toggleWebmRecording,

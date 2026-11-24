@@ -1,6 +1,7 @@
 import type {
   AsciiGrid,
   EmbedFormat,
+  PosterAspectRatio,
   StudioMode,
   StudioSettings,
 } from '../types/studio';
@@ -98,6 +99,101 @@ export function drawAsciiToCanvas(
       ctx.fillText(grid[y].map((c) => c.ch).join(''), pad, py);
     }
   }
+  ctx.shadowBlur = 0;
+}
+
+export function drawPosterToCanvas(
+  canvas: HTMLCanvasElement,
+  grid: AsciiGrid,
+  settings: StudioSettings,
+  mode: StudioMode,
+  aspect: PosterAspectRatio
+): void {
+  if (!grid.length || !grid[0].length) return;
+
+  const dims =
+    aspect === 'story_9_16'
+      ? { w: 1080, h: 1920 }
+      : aspect === 'square_1_1'
+      ? { w: 1440, h: 1440 }
+      : { w: 2560, h: 1440 };
+
+  canvas.width = dims.w;
+  canvas.height = dims.h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  // Background fill + subtle studio vignette
+  ctx.fillStyle = settings.canvasBg;
+  ctx.fillRect(0, 0, dims.w, dims.h);
+
+  const isLight = settings.canvasBg.toLowerCase() === '#fafaf9';
+  const vignette = ctx.createRadialGradient(
+    dims.w / 2,
+    dims.h / 2,
+    Math.min(dims.w, dims.h) * 0.12,
+    dims.w / 2,
+    dims.h / 2,
+    Math.max(dims.w, dims.h) * 0.72
+  );
+  vignette.addColorStop(0, isLight ? 'rgba(255,255,255,0.45)' : 'rgba(99,102,241,0.07)');
+  vignette.addColorStop(1, isLight ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.42)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, dims.w, dims.h);
+
+  const numRows = grid.length;
+  const numCols = grid[0].length;
+  const availW = dims.w * 0.86;
+  const availH = dims.h * 0.82;
+  const lhRatio = Math.max(0.95, settings.lineHeight);
+  const fontByW = availW / (numCols * 0.62);
+  const fontByH = availH / (numRows * lhRatio);
+  const fontSize = Math.max(4, Math.min(34, Math.min(fontByW, fontByH)));
+
+  const charWidth = fontSize * 0.62;
+  const lineHeight = fontSize * lhRatio;
+  const blockW = numCols * charWidth;
+  const blockH = numRows * lineHeight;
+  const startX = Math.round((dims.w - blockW) / 2);
+  const startY = Math.round((dims.h - blockH) / 2);
+
+  ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+  ctx.textBaseline = 'top';
+  ctx.shadowBlur = settings.neonGlow > 0 ? settings.neonGlow * 1.4 : 0;
+
+  const useColor = isColorRenderingEnabled(settings, mode);
+
+  for (let y = 0; y < numRows; y++) {
+    const py = startY + y * lineHeight;
+    if (useColor) {
+      for (let x = 0; x < numCols; x++) {
+        const cell = grid[y][x];
+        const px = startX + x * charWidth;
+        if (cell.br !== undefined) {
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = `rgb(${cell.br},${cell.bg},${cell.bb})`;
+          ctx.fillRect(
+            px,
+            py,
+            Math.ceil(charWidth + 0.6),
+            Math.ceil(lineHeight + 0.6)
+          );
+          ctx.shadowBlur = settings.neonGlow > 0 ? settings.neonGlow * 1.4 : 0;
+        }
+        if (cell.ch !== ' ') {
+          const fg = `rgb(${cell.r},${cell.g},${cell.b})`;
+          ctx.fillStyle = fg;
+          ctx.shadowColor = fg;
+          ctx.fillText(cell.ch, px, py);
+        }
+      }
+    } else {
+      ctx.fillStyle = settings.tintHex;
+      ctx.shadowColor = settings.tintHex;
+      ctx.fillText(grid[y].map((c) => c.ch).join(''), startX, py);
+    }
+  }
+
   ctx.shadowBlur = 0;
 }
 

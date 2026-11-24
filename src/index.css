@@ -80,9 +80,14 @@ input[type="range"].studio-slider::-moz-range-thumb {
   transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Subtle Stage Dot-Grid Backdrop */
+/* Subtle Stage Dot-Grid Backdrops */
 .stage-grid-overlay {
   background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.stage-grid-light {
+  background-image: radial-gradient(rgba(24, 24, 27, 0.1) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 

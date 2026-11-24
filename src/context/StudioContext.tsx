@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -13,6 +14,11 @@ import {
   DEFAULT_SETTINGS,
   PATH_TO_MODE,
 } from '../constants/studio';
+import {
+  FLORAL_CUSTOM_CHARSET,
+  FLOWER_STYLES,
+  FLOWER_TEMPLATES,
+} from '../constants/flowers';
 import { useAudioReactive } from '../hooks/useAudioReactive';
 import { useExportActions } from '../hooks/useExportActions';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -27,7 +33,15 @@ import {
   drawSampleArtwork,
   drawTextBanner,
 } from '../lib/artworkGenerators';
+import { drawFlowerArtwork } from '../lib/flowerGenerator';
 import {
+  decodeFlowerShareParam,
+  encodeFlowerShareUrl,
+  generateFlowerFromName,
+} from '../lib/flowerExtras';
+import { copyTextToClipboard } from '../lib/exporters';
+import {
+  applyFlowerGiftCardFrame,
   applyPostFx,
   applyTerminalFrame,
   gridToPlainAndHtml,
@@ -41,10 +55,17 @@ import type {
   AudioFxTarget,
   AudioState,
   DetailMode,
+  FlowerArrangement,
+  FlowerAtmosphere,
+  FlowerConfig,
+  FlowerQuality,
+  FlowerStyleId,
+  FlowerTemplateId,
   ImageTransformAction,
   MediaCaptureState,
   ModeSpecificState,
   Object3DType,
+  PosterAspectRatio,
   SampleArtworkName,
   StudioMode,
   StudioPresetData,
@@ -102,6 +123,18 @@ interface StudioContextValue {
   selectObject3D: (obj: Object3DType) => void;
   reset3DCamera: () => void;
 
+  // Flower Arts actions
+  updateFlowerConfig: (patch: Partial<FlowerConfig>) => void;
+  selectFlowerTemplate: (template: FlowerTemplateId) => void;
+  selectFlowerArrangement: (arrangement: FlowerArrangement) => void;
+  selectFlowerQuality: (quality: FlowerQuality) => void;
+  selectFlowerStyle: (style: FlowerStyleId) => void;
+  generateFlowerByName: (name: string) => void;
+  copyFlowerShareLink: () => Promise<void>;
+  randomizeFlowerArt: () => void;
+  applyFloralGlyphs: () => void;
+  resetFlowerCamera: () => void;
+
   // Audio reactive
   audioState: AudioState;
   meterBarRef: React.RefObject<HTMLDivElement | null>;
@@ -122,8 +155,13 @@ interface StudioContextValue {
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   fontSize: number;
+  zoomPercent: number;
+  minFontSize: number;
+  maxFontSize: number;
   zoomIn: () => void;
   zoomOut: () => void;
+  setZoomFontSize: (px: number, anchor?: { clientX: number; clientY: number }) => void;
+  zoomByFactor: (factor: number, anchor?: { clientX: number; clientY: number }) => void;
   fitAsciiToViewport: () => void;
   gridDims: { cols: number; rows: number };
   compareActive: boolean;
@@ -150,6 +188,7 @@ interface StudioContextValue {
   downloadTxt: () => void;
   downloadAnsi: () => void;
   downloadPng: () => void;
+  downloadPoster: (aspect: PosterAspectRatio) => void;
   downloadSvg: () => void;
   downloadHtml: () => void;
   toggleWebmRecording: () => void;
@@ -157,6 +196,7 @@ interface StudioContextValue {
   getPlainAsciiText: () => string;
 
   // DOM refs for PreviewStage
+  stageContainerRef: React.RefObject<HTMLDivElement | null>;
   previewStageRef: React.RefObject<HTMLDivElement | null>;
   asciiWrapperRef: React.RefObject<HTMLDivElement | null>;
   asciiOutputRef: React.RefObject<HTMLPreElement | null>;
@@ -174,7 +214,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const mode: StudioMode = PATH_TO_MODE[location.pathname] ?? 'image';
 
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme: toggleThemeRaw } = useTheme();
   const { message: toastMessage, visible: toastVisible, showToast } = useToast();
   const {
     presets,
@@ -183,10 +223,15 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     deletePreset: deletePresetRaw,
   } = usePresets();
 
-  const [settings, setSettings] = useState<StudioSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<StudioSettings>(() =>
+    theme === 'light'
+      ? { ...DEFAULT_SETTINGS, canvasBg: '#fafaf9', tintHex: '#18181b' }
+      : DEFAULT_SETTINGS
+  );
   const [modeState, setModeState] = useState<ModeSpecificState>(DEFAULT_MODE_STATE);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [fontSize, setFontSize] = useState(8);
+  const [baseFitFontSize, setBaseFitFontSize] = useState(8);
   const [gridDims, setGridDims] = useState({ cols: 90, rows: 45 });
   const [compareActive, setCompareActive] = useState(false);
   const [comparePos, setComparePos] = useState(50);
@@ -207,10 +252,17 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   compareActiveRef.current = compareActive;
 
   // Stage & hidden media DOM refs
+  const stageContainerRef = useRef<HTMLDivElement | null>(null);
   const previewStageRef = useRef<HTMLDivElement | null>(null);
   const asciiWrapperRef = useRef<HTMLDivElement | null>(null);
   const asciiOutputRef = useRef<HTMLPreElement | null>(null);
   const compareCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pendingZoomAnchorRef = useRef<{
+    normX: number;
+    normY: number;
+    relX: number;
+    relY: number;
+  } | null>(null);
   const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const processingCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -403,6 +455,18 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
                 rot3dRef.current.x,
                 rot3dRef.current.y
               );
+            } else if (currentMode === 'flowers') {
+              const audioBass = audio.energyRef.current.active
+                ? audio.energyRef.current.bass
+                : 0;
+              drawFlowerArtwork(
+                srcCanvas,
+                currentModeState.flower,
+                rot3dRef.current.x,
+                rot3dRef.current.y,
+                now,
+                audioBass
+              );
             }
           }
 
@@ -463,12 +527,21 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         }
 
         const processedGrid = applyPostFx(grid, currentSettings, runtime);
-        const finalGrid = applyTerminalFrame(
-          processedGrid,
-          currentSettings.frameStyle,
-          currentSettings.watermark,
-          currentSettings.tintHex
-        );
+        const finalGrid =
+          currentMode === 'flowers' && currentModeState.flower.giftCardEnabled
+            ? applyFlowerGiftCardFrame(
+                processedGrid,
+                currentModeState.flower.giftTitle,
+                currentModeState.flower.giftMessage,
+                currentModeState.flower.giftSender,
+                currentSettings.tintHex
+              )
+            : applyTerminalFrame(
+                processedGrid,
+                currentSettings.frameStyle,
+                currentSettings.watermark,
+                currentSettings.tintHex
+              );
 
         const useColor = isColorRenderingEnabled(currentSettings, currentMode);
         const { plainText, htmlText, cols, rows } = gridToPlainAndHtml(
@@ -510,11 +583,61 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
   renderAsciiRef.current = renderAscii;
 
-  const applyFontSize = useCallback((px: number) => {
-    const rounded = Math.round(px * 2) / 2;
-    const clamped = Math.max(1.5, Math.min(28, rounded));
-    setFontSize(clamped);
-  }, []);
+  const MIN_FONT_SIZE = 1.5;
+  const MAX_FONT_SIZE = 64;
+
+  const applyFontSize = useCallback(
+    (px: number, anchor?: { clientX: number; clientY: number }) => {
+      const clamped = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, px));
+      const next = Math.round(clamped * 10) / 10;
+      if (next === fontSizeRef.current) return;
+
+      const stage = previewStageRef.current;
+      const wrapper = asciiWrapperRef.current;
+      if (stage && wrapper) {
+        const stageRect = stage.getBoundingClientRect();
+        const wrapRect = wrapper.getBoundingClientRect();
+        if (wrapRect.width > 0 && wrapRect.height > 0) {
+          const pointerX = anchor
+            ? anchor.clientX
+            : stageRect.left + stageRect.width / 2;
+          const pointerY = anchor
+            ? anchor.clientY
+            : stageRect.top + stageRect.height / 2;
+          pendingZoomAnchorRef.current = {
+            normX: (pointerX - wrapRect.left) / wrapRect.width,
+            normY: (pointerY - wrapRect.top) / wrapRect.height,
+            relX: pointerX - stageRect.left,
+            relY: pointerY - stageRect.top,
+          };
+        }
+      }
+
+      fontSizeRef.current = next;
+      setFontSize(next);
+    },
+    []
+  );
+
+  useLayoutEffect(() => {
+    const anchor = pendingZoomAnchorRef.current;
+    if (!anchor) return;
+    pendingZoomAnchorRef.current = null;
+
+    const stage = previewStageRef.current;
+    const wrapper = asciiWrapperRef.current;
+    if (!stage || !wrapper) return;
+
+    const stageRect = stage.getBoundingClientRect();
+    const wrapRect = wrapper.getBoundingClientRect();
+    const targetClientX = wrapRect.left + anchor.normX * wrapRect.width;
+    const targetClientY = wrapRect.top + anchor.normY * wrapRect.height;
+    const dx = targetClientX - (stageRect.left + anchor.relX);
+    const dy = targetClientY - (stageRect.top + anchor.relY);
+
+    if (Math.abs(dx) > 0.25) stage.scrollLeft += dx;
+    if (Math.abs(dy) > 0.25) stage.scrollTop += dy;
+  }, [fontSize]);
 
   const fitAsciiToViewport = useCallback(() => {
     const grid = lastFinalGridRef.current;
@@ -528,17 +651,41 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     const sizeByW = availW / (cols * 0.62);
     const sizeByH =
       availH / (rows * Math.max(0.85, settingsRef.current.lineHeight));
-    const best = Math.floor(Math.min(sizeByW, sizeByH) * 2) / 2;
-    applyFontSize(best);
-  }, [applyFontSize]);
+    const best = Math.max(
+      MIN_FONT_SIZE,
+      Math.min(MAX_FONT_SIZE, Math.floor(Math.min(sizeByW, sizeByH) * 2) / 2)
+    );
+    pendingZoomAnchorRef.current = null;
+    setBaseFitFontSize(best);
+    fontSizeRef.current = best;
+    setFontSize(best);
+    stage.scrollLeft = 0;
+    stage.scrollTop = 0;
+  }, []);
+
+  const zoomByFactor = useCallback(
+    (factor: number, anchor?: { clientX: number; clientY: number }) => {
+      applyFontSize(fontSizeRef.current * factor, anchor);
+    },
+    [applyFontSize]
+  );
 
   const zoomIn = useCallback(() => {
-    applyFontSize(fontSizeRef.current + (fontSizeRef.current < 6 ? 0.5 : 1));
+    const curr = fontSizeRef.current;
+    const next = Math.max(curr + 0.5, curr * 1.18);
+    applyFontSize(Math.round(next * 2) / 2);
   }, [applyFontSize]);
 
   const zoomOut = useCallback(() => {
-    applyFontSize(fontSizeRef.current - (fontSizeRef.current <= 6 ? 0.5 : 1));
+    const curr = fontSizeRef.current;
+    const next = Math.min(curr - 0.5, curr / 1.18);
+    applyFontSize(Math.round(next * 2) / 2);
   }, [applyFontSize]);
+
+  const zoomPercent = Math.max(
+    10,
+    Math.round((fontSize / Math.max(1, baseFitFontSize)) * 100)
+  );
 
   const exportsApi = useExportActions({
     getLastGrid: () => lastFinalGridRef.current,
@@ -570,6 +717,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
   // React to route/mode changes
   const prevModeRef = useRef<StudioMode>(mode);
+  const flowerVisitedRef = useRef(false);
   useEffect(() => {
     if (prevModeRef.current === 'camera' && mode !== 'camera') {
       capture.stopCapture();
@@ -579,8 +727,59 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     if (mode === 'image' && !modeStateRef.current.hasCustomImage && sourceCanvasRef.current) {
       drawSampleArtwork(sourceCanvasRef.current, modeStateRef.current.sampleName);
     }
+
+    if (mode === 'flowers') {
+      rot3dRef.current.x = 0.34;
+      rot3dRef.current.y = 0.25;
+      const shared = decodeFlowerShareParam(location.search);
+      if (shared) {
+        flowerVisitedRef.current = true;
+        setModeState((prev) => ({ ...prev, flower: shared.flower }));
+        const preset = FLOWER_STYLES.find((s) => s.id === shared.flower.style);
+        const is4k = shared.flower.quality === '4k';
+        const isHd = shared.flower.quality === 'hd';
+        const useColor = shared.flower.customColorsEnabled
+          ? true
+          : preset?.color ?? true;
+        setSettings((prev) => ({
+          ...prev,
+          color: useColor,
+          colorPalette: useColor ? 'original' : preset?.colorPalette ?? 'mono',
+          canvasBg: preset?.canvasBg ?? prev.canvasBg,
+          tintHex: preset?.tintHex ?? prev.tintHex,
+          neonGlow: preset?.neonGlow ?? 0,
+          width: is4k ? 240 : isHd ? 150 : 90,
+          detailMode: is4k
+            ? useColor
+              ? 'halfblock_hd'
+              : 'braille_hd'
+            : isHd
+            ? 'photo_hd'
+            : 'standard',
+          ...(shared.charsetKey ? { charsetKey: shared.charsetKey } : {}),
+        }));
+        showToast(
+          shared.flower.giftCardEnabled && shared.flower.giftTitle
+            ? `Opened Gift: ${shared.flower.giftTitle}`
+            : 'Loaded shared 3D ASCII Flower'
+        );
+      } else if (!flowerVisitedRef.current) {
+        flowerVisitedRef.current = true;
+        if (modeStateRef.current.flower.style === 'colorful') {
+          setSettings((prev) => ({
+            ...prev,
+            color: true,
+            colorPalette: 'original',
+          }));
+        }
+      }
+    }
+
     renderAscii();
-  }, [mode, capture.stopCapture, renderAscii]);
+    if (mode === 'flowers') {
+      window.setTimeout(fitAsciiToViewport, 45);
+    }
+  }, [mode, location.search, capture.stopCapture, fitAsciiToViewport, renderAscii, showToast]);
 
   // Re-render when settings or modeState change
   useEffect(() => {
@@ -613,6 +812,15 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (
+        m === 'flowers' &&
+        ms.flower.dimension === '3d' &&
+        ms.flower.autoSpin &&
+        !rot3dRef.current.dragging
+      ) {
+        rot3dRef.current.y += 0.022;
+      }
+
+      if (
         m === 'paint' &&
         ms.paintFlipbookPlaying &&
         paint.paintRef.current.frames.length > 1
@@ -630,12 +838,22 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
           capture.captureRef.current.camActive &&
           !capture.captureRef.current.frozen) ||
         (m === '3d' && ms.autoSpin3d) ||
+        (m === 'flowers' &&
+          (ms.flower.autoBloom ||
+            ms.flower.windSway ||
+            ms.flower.atmosphere !== 'none' ||
+            ms.flower.audioBloom ||
+            (ms.flower.dimension === '3d' && ms.flower.autoSpin))) ||
         audio.energyRef.current.active ||
         st.fxMode !== 'none' ||
         st.colorPalette === 'rainbow' ||
         (st.mouseFx === 'ripple' && now - mouseRef.current.clickTime < 1900);
 
-      const frameInterval = 1000 / Math.max(8, ms.animFps);
+      const targetFps =
+        m === 'flowers' && ms.flower.quality === '4k'
+          ? Math.min(12, ms.animFps)
+          : ms.animFps;
+      const frameInterval = 1000 / Math.max(8, targetFps);
       if (needsContinuous && now - lastLoopRender >= frameInterval) {
         lastLoopRender = now;
         renderAscii(now);
@@ -665,7 +883,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   // Fullscreen management
   const toggleFullscreen = useCallback(
     (forceExit = false) => {
-      const stage = previewStageRef.current;
+      const stage = stageContainerRef.current ?? previewStageRef.current;
       const isNativeFs = !!document.fullscreenElement;
 
       if (forceExit || isNativeFs || isFallbackFullscreenRef.current) {
@@ -709,6 +927,28 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, [fitAsciiToViewport]);
+
+  const toggleTheme = useCallback(() => {
+    const nextTheme: ThemeMode = theme === 'dark' ? 'light' : 'dark';
+    toggleThemeRaw();
+    setSettings((prev) => {
+      if (nextTheme === 'light' && prev.canvasBg !== '#fafaf9') {
+        return {
+          ...prev,
+          canvasBg: '#fafaf9',
+          tintHex: prev.tintHex === '#e4e4e7' ? '#18181b' : prev.tintHex,
+        };
+      }
+      if (nextTheme === 'dark' && prev.canvasBg === '#fafaf9') {
+        return {
+          ...prev,
+          canvasBg: '#09090b',
+          tintHex: prev.tintHex === '#18181b' ? '#e4e4e7' : prev.tintHex,
+        };
+      }
+      return prev;
+    });
+  }, [theme, toggleThemeRaw]);
 
   // Settings & actions
   const updateSettings = useCallback(
@@ -938,6 +1178,234 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     renderAscii();
   }, [renderAscii]);
 
+  // Flower Arts actions
+  const updateFlowerConfig = useCallback((patch: Partial<FlowerConfig>) => {
+    setModeState((prev) => ({
+      ...prev,
+      flower: { ...prev.flower, ...patch },
+    }));
+  }, []);
+
+  const selectFlowerTemplate = useCallback((template: FlowerTemplateId) => {
+    const meta = FLOWER_TEMPLATES.find((t) => t.id === template);
+    setModeState((prev) => ({
+      ...prev,
+      flower: {
+        ...prev.flower,
+        template,
+        arrangement:
+          template === 'bouquet' ? 'bouquet' : prev.flower.arrangement,
+        petalCount: meta ? meta.defaultPetals : prev.flower.petalCount,
+      },
+    }));
+  }, []);
+
+  const selectFlowerArrangement = useCallback(
+    (arrangement: FlowerArrangement) => {
+      setModeState((prev) => ({
+        ...prev,
+        flower: {
+          ...prev.flower,
+          arrangement,
+          template:
+            arrangement === 'single' && prev.flower.template === 'bouquet'
+              ? 'rose'
+              : prev.flower.template,
+        },
+      }));
+      const labels: Record<FlowerArrangement, string> = {
+        single: 'Single flower focus',
+        bouquet: '3D Wrapped Bouquet active',
+        vase: '3D Sculpted Vase active',
+        dome: 'Enchanted 3D Glass Dome active',
+      };
+      showToast(labels[arrangement]);
+    },
+    [showToast]
+  );
+
+  const selectFlowerQuality = useCallback(
+    (quality: FlowerQuality) => {
+      setModeState((prev) => ({
+        ...prev,
+        flower: { ...prev.flower, quality },
+      }));
+
+      if (quality === '4k') {
+        const useColorSubpixel = settingsRef.current.color;
+        updateSettings(
+          {
+            width: 240,
+            detailMode: useColorSubpixel ? 'halfblock_hd' : 'braille_hd',
+            sharpen: 0.25,
+          },
+          { fitAfter: true }
+        );
+        showToast('4K Ultra-HD Mode (240 cols · Hi-Res 3D Mesh)');
+      } else if (quality === 'hd') {
+        updateSettings(
+          {
+            width: 150,
+            detailMode: 'photo_hd',
+            sharpen: 0.15,
+          },
+          { fitAfter: true }
+        );
+        showToast('HD Photo ASCII (150 cols)');
+      } else {
+        updateSettings(
+          {
+            width: 90,
+            detailMode: 'standard',
+            sharpen: 0,
+          },
+          { fitAfter: true }
+        );
+        showToast('Standard ASCII (90 cols)');
+      }
+    },
+    [showToast, updateSettings]
+  );
+
+  const selectFlowerStyle = useCallback(
+    (style: FlowerStyleId) => {
+      const preset = FLOWER_STYLES.find((s) => s.id === style);
+      setModeState((prev) => ({
+        ...prev,
+        flower: { ...prev.flower, style, customColorsEnabled: false },
+      }));
+      if (preset) {
+        const isLightMono = style === 'monochrome' && theme === 'light';
+        const is4k = modeStateRef.current.flower.quality === '4k';
+        updateSettings({
+          color: preset.color,
+          colorPalette: preset.colorPalette,
+          ...(is4k
+            ? { detailMode: preset.color ? 'halfblock_hd' : 'braille_hd' }
+            : {}),
+          canvasBg: isLightMono
+            ? '#fafaf9'
+            : preset.canvasBg ?? settingsRef.current.canvasBg,
+          tintHex: isLightMono
+            ? '#18181b'
+            : preset.tintHex ?? settingsRef.current.tintHex,
+          neonGlow: preset.neonGlow,
+        });
+      }
+    },
+    [theme, updateSettings]
+  );
+
+  const generateFlowerByName = useCallback(
+    (rawName: string) => {
+      const clean = rawName.trim();
+      if (!clean) {
+        showToast('Enter a name first to generate its flower DNA');
+        return;
+      }
+      const { patch, summary } = generateFlowerFromName(clean);
+      setModeState((prev) => ({
+        ...prev,
+        flower: { ...prev.flower, ...patch },
+      }));
+      const is4k = modeStateRef.current.flower.quality === '4k';
+      updateSettings({
+        color: true,
+        colorPalette: 'original',
+        ...(is4k ? { detailMode: 'halfblock_hd' } : {}),
+      });
+      showToast(`"${clean}" DNA → ${summary}`);
+    },
+    [showToast, updateSettings]
+  );
+
+  const copyFlowerShareLink = useCallback(async () => {
+    const url = encodeFlowerShareUrl(
+      modeStateRef.current.flower,
+      settingsRef.current
+    );
+    const ok = await copyTextToClipboard(url);
+    showToast(
+      ok
+        ? 'Copied shareable 3D Flower Gift link!'
+        : 'Could not copy link to clipboard'
+    );
+  }, [showToast]);
+
+  const randomizeFlowerArt = useCallback(() => {
+    const pick = <T,>(arr: readonly T[]): T =>
+      arr[Math.floor(Math.random() * arr.length)];
+    const tpl = pick(FLOWER_TEMPLATES);
+    const sty = pick(FLOWER_STYLES);
+    const dim = Math.random() > 0.2 ? '3d' : '2d';
+    const arrPool: FlowerArrangement[] = ['single', 'bouquet', 'vase', 'dome'];
+    const arr: FlowerArrangement =
+      tpl.id === 'bouquet' ? 'bouquet' : pick(arrPool);
+    const atmoPool: FlowerAtmosphere[] = [
+      'petals',
+      'fireflies',
+      'rain',
+      'snow',
+      'starlight',
+    ];
+    const bloom = Math.round((0.55 + Math.random() * 0.45) * 20) / 20;
+
+    setModeState((prev) => ({
+      ...prev,
+      flower: {
+        ...prev.flower,
+        template: tpl.id,
+        dimension: dim,
+        arrangement: arr,
+        style: sty.id,
+        customColorsEnabled: false,
+        bloom,
+        petalCount: Math.max(
+          5,
+          Math.min(20, tpl.defaultPetals + Math.floor(Math.random() * 5) - 2)
+        ),
+        atmosphere: pick(atmoPool),
+      },
+    }));
+
+    const is4k = modeStateRef.current.flower.quality === '4k';
+    updateSettings({
+      color: sty.color,
+      colorPalette: sty.colorPalette,
+      ...(is4k
+        ? { detailMode: sty.color ? 'halfblock_hd' : 'braille_hd' }
+        : {}),
+      canvasBg: sty.canvasBg ?? '#09090b',
+      tintHex: sty.tintHex ?? '#e4e4e7',
+      neonGlow: sty.neonGlow,
+    });
+    showToast(
+      `${tpl.label} · ${arr.toUpperCase()} (${dim.toUpperCase()} · ${sty.label})`
+    );
+  }, [showToast, updateSettings]);
+
+  const applyFloralGlyphs = useCallback(() => {
+    setModeState((prev) => ({
+      ...prev,
+      flower: {
+        ...prev.flower,
+        quality: prev.flower.quality === '4k' ? 'hd' : prev.flower.quality,
+      },
+    }));
+    updateSettings({
+      detailMode: 'standard',
+      charsetKey: 'custom',
+      customCharset: FLORAL_CUSTOM_CHARSET,
+    });
+    showToast('Applied Floral ASCII glyphs (✿❀❁*+~·)');
+  }, [showToast, updateSettings]);
+
+  const resetFlowerCamera = useCallback(() => {
+    rot3dRef.current.x = 0.34;
+    rot3dRef.current.y = 0.25;
+    renderAscii();
+  }, [renderAscii]);
+
   // Presets actions
   const savePreset = useCallback(
     (name: string) => {
@@ -987,6 +1455,9 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
   const onStagePointerDown = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
+      if ('touches' in e && e.touches.length > 1) return;
+      if (!('touches' in e) && e.button !== 0) return;
+
       const point =
         'touches' in e ? e.touches[0] : (e as React.MouseEvent);
       if (!point) return;
@@ -1001,7 +1472,12 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         renderAscii();
       }
 
-      if (modeRef.current === '3d') {
+      const is3DInteractive =
+        modeRef.current === '3d' ||
+        (modeRef.current === 'flowers' &&
+          modeStateRef.current.flower.dimension === '3d');
+
+      if (is3DInteractive) {
         e.preventDefault();
         rot3dRef.current.dragging = true;
         rot3dRef.current.lastX = point.clientX;
@@ -1043,6 +1519,10 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const onMove = (e: MouseEvent | TouchEvent) => {
+      if ('touches' in e && e.touches.length > 1) {
+        rot3dRef.current.dragging = false;
+        return;
+      }
       const point =
         'touches' in e ? e.touches[0] : (e as MouseEvent);
       if (!point) return;
@@ -1057,7 +1537,12 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (modeRef.current === '3d' && rot3dRef.current.dragging) {
+      const is3DInteractive =
+        modeRef.current === '3d' ||
+        (modeRef.current === 'flowers' &&
+          modeStateRef.current.flower.dimension === '3d');
+
+      if (is3DInteractive && rot3dRef.current.dragging) {
         if ('touches' in e) e.preventDefault();
         rot3dRef.current.y += (point.clientX - rot3dRef.current.lastX) * 0.012;
         rot3dRef.current.x += (point.clientY - rot3dRef.current.lastY) * 0.012;
@@ -1130,7 +1615,22 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       onSpaceAction: () => {
         if (modeRef.current === 'paint') flipTogglePlay();
         else if (modeRef.current === 'animate') toggleAnimPlayPause();
-        else if (audio.audioState.mode === 'file') audio.toggleAudioPlayPause();
+        else if (modeRef.current === 'flowers') {
+          setModeState((prev) => ({
+            ...prev,
+            flower: {
+              ...prev.flower,
+              autoSpin:
+                prev.flower.dimension === '3d'
+                  ? !prev.flower.autoSpin
+                  : prev.flower.autoSpin,
+              autoBloom:
+                prev.flower.dimension === '2d'
+                  ? !prev.flower.autoBloom
+                  : prev.flower.autoBloom,
+            },
+          }));
+        } else if (audio.audioState.mode === 'file') audio.toggleAudioPlayPause();
       },
     }),
     [
@@ -1193,6 +1693,17 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     selectObject3D,
     reset3DCamera,
 
+    updateFlowerConfig,
+    selectFlowerTemplate,
+    selectFlowerArrangement,
+    selectFlowerQuality,
+    selectFlowerStyle,
+    generateFlowerByName,
+    copyFlowerShareLink,
+    randomizeFlowerArt,
+    applyFloralGlyphs,
+    resetFlowerCamera,
+
     audioState: audio.audioState,
     meterBarRef: audio.meterBarRef,
     handleAudioFile: audio.handleAudioFile,
@@ -1210,8 +1721,13 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     sidebarOpen,
     toggleSidebar: () => setSidebarOpen((prev) => !prev),
     fontSize,
+    zoomPercent,
+    minFontSize: MIN_FONT_SIZE,
+    maxFontSize: MAX_FONT_SIZE,
     zoomIn,
     zoomOut,
+    setZoomFontSize: applyFontSize,
+    zoomByFactor,
     fitAsciiToViewport,
     gridDims,
     compareActive,
@@ -1236,12 +1752,14 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     downloadTxt: exportsApi.downloadTxt,
     downloadAnsi: exportsApi.downloadAnsi,
     downloadPng: exportsApi.downloadPng,
+    downloadPoster: exportsApi.downloadPoster,
     downloadSvg: exportsApi.downloadSvg,
     downloadHtml: exportsApi.downloadHtml,
     toggleWebmRecording: exportsApi.toggleWebmRecording,
     recordAnimatedGif: exportsApi.recordAnimatedGif,
     getPlainAsciiText: () => plainAsciiTextRef.current,
 
+    stageContainerRef,
     previewStageRef,
     asciiWrapperRef,
     asciiOutputRef,

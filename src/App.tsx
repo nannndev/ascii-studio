@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { StudioLayout } from './components/layout/StudioLayout';
 import { StudioProvider } from './context/StudioContext';
 import { AnimateModePage } from './pages/AnimateModePage';
+import { FlowerModePage } from './pages/FlowerModePage';
 import { ImageModePage } from './pages/ImageModePage';
 import { LiveModePage } from './pages/LiveModePage';
 import { PaintModePage } from './pages/PaintModePage';
@@ -17,6 +18,7 @@ export const App: React.FC = () => {
           <Route path="/" element={<StudioLayout />}>
             <Route index element={<Navigate to="/image" replace />} />
             <Route path="image" element={<ImageModePage />} />
+            <Route path="flowers" element={<FlowerModePage />} />
             <Route path="text" element={<TextModePage />} />
             <Route path="animate" element={<AnimateModePage />} />
             <Route path="live" element={<LiveModePage />} />

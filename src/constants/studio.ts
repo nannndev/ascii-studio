@@ -4,6 +4,7 @@ import type {
   StudioMode,
   StudioSettings,
 } from '../types/studio';
+import { DEFAULT_FLOWER_CONFIG } from './flowers';
 
 export const CHARSETS: Record<Exclude<CharsetKey, 'custom'>, string> = {
   standard: '@%#*+=-:. ',
@@ -90,6 +91,8 @@ export const DEFAULT_MODE_STATE: ModeSpecificState = {
 
   obj3d: 'donut',
   autoSpin3d: true,
+
+  flower: DEFAULT_FLOWER_CONFIG,
 };
 
 export const WIDTH_PRESETS = [
@@ -127,6 +130,7 @@ export interface StudioRouteMeta {
 
 export const STUDIO_ROUTES: readonly StudioRouteMeta[] = [
   { mode: 'image', path: '/image', label: 'Image', title: 'Source Image' },
+  { mode: 'flowers', path: '/flowers', label: 'Flowers', title: 'Flower Arts' },
   { mode: 'text', path: '/text', label: 'Text', title: 'Text Banner' },
   { mode: 'animate', path: '/animate', label: 'Animate', title: 'Animation & Video' },
   { mode: 'camera', path: '/live', label: 'Live', title: 'Camera & Screen' },
@@ -136,6 +140,7 @@ export const STUDIO_ROUTES: readonly StudioRouteMeta[] = [
 
 export const PATH_TO_MODE: Record<string, StudioMode> = {
   '/image': 'image',
+  '/flowers': 'flowers',
   '/text': 'text',
   '/animate': 'animate',
   '/live': 'camera',

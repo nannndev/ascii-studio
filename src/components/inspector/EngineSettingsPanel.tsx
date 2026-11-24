@@ -2,7 +2,7 @@ import React from 'react';
 import { RotateCcw } from 'lucide-react';
 import { WIDTH_PRESETS } from '../../constants/studio';
 import { useStudio } from '../../context/StudioContext';
-import type { CharsetKey, CutoutMode, DetailMode } from '../../types/studio';
+import type { CutoutMode, DetailMode } from '../../types/studio';
 import { SelectField } from '../ui/SelectField';
 import { SliderField } from '../ui/SliderField';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
@@ -12,17 +12,6 @@ const DETAIL_ENGINE_OPTIONS: readonly { value: DetailMode; label: string }[] = [
   { value: 'photo_hd', label: 'HD Photo ASCII (70-Char + Floyd-Steinberg)' },
   { value: 'braille_hd', label: 'Ultra Braille 2×4 Sub-Pixel (8× Sharp)' },
   { value: 'halfblock_hd', label: 'True-Color Photo HD (Half-Block ▀)' },
-];
-
-const CHARSET_OPTIONS: readonly { value: CharsetKey; label: string }[] = [
-  { value: 'standard', label: 'Standard (@%#*+=-:. )' },
-  { value: 'detailed', label: 'Ultra Detailed (70 chars)' },
-  { value: 'blocks', label: 'Unicode Blocks (█▓▒░ )' },
-  { value: 'braille', label: 'Braille Dots (⣿⣷⣶⣦⣤⣄⣀⠀)' },
-  { value: 'matrix', label: 'Matrix Katakana (ｦｱｳｴｵ...)' },
-  { value: 'minimal', label: 'Minimal (#+:. )' },
-  { value: 'binary', label: 'Binary (10 )' },
-  { value: 'custom', label: 'Custom...' },
 ];
 
 const CUTOUT_OPTIONS: readonly { value: CutoutMode; label: string }[] = [
@@ -57,25 +46,6 @@ export const EngineSettingsPanel: React.FC = () => {
         options={DETAIL_ENGINE_OPTIONS}
         onChange={(detailMode) => updateSettings({ detailMode })}
       />
-
-      <div className="space-y-2">
-        <SelectField
-          id="charsetPreset"
-          label="Character set"
-          value={settings.charsetKey}
-          options={CHARSET_OPTIONS}
-          onChange={(charsetKey) => updateSettings({ charsetKey })}
-        />
-        {settings.charsetKey === 'custom' && (
-          <input
-            type="text"
-            value={settings.customCharset}
-            placeholder="Dark to light chars"
-            onChange={(e) => updateSettings({ customCharset: e.target.value })}
-            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500"
-          />
-        )}
-      </div>
 
       {/* Resolution + Presets */}
       <div className="space-y-2">

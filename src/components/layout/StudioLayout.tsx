@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { STUDIO_ROUTES } from '../../constants/studio';
 import { useStudio } from '../../context/StudioContext';
 import type { InspectorTab } from '../../types/studio';
+import { CharacterPaletteSwitcher } from '../inspector/CharacterPaletteSwitcher';
 import { ColorSettingsPanel } from '../inspector/ColorSettingsPanel';
 import { EngineSettingsPanel } from '../inspector/EngineSettingsPanel';
 import { FxAudioPanel } from '../inspector/FxAudioPanel';
@@ -47,6 +48,9 @@ export const StudioLayout: React.FC = () => {
             <Outlet />
           </section>
 
+          {/* Character Palette Switcher */}
+          <CharacterPaletteSwitcher />
+
           {/* Inspector Settings Tabs (Zero Scroll Fatigue) */}
           <div className="sticky top-0 z-10 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 px-3 pt-2.5 pb-2">
             <div
@@ -85,7 +89,7 @@ export const StudioLayout: React.FC = () => {
         </aside>
 
         {/* Right Workspace Stage */}
-        <section className="order-1 md:order-2 flex-1 flex flex-col min-w-0 sticky top-14 z-20 md:static h-[48vh] sm:h-[52vh] md:h-full bg-zinc-950 border-b md:border-b-0 border-zinc-200 dark:border-zinc-800">
+        <section className="order-1 md:order-2 flex-1 flex flex-col min-w-0 sticky top-14 z-20 md:static h-[48vh] sm:h-[52vh] md:h-full bg-zinc-100 dark:bg-zinc-950 border-b md:border-b-0 border-zinc-200 dark:border-zinc-800">
           <WorkspaceToolbar />
           <PreviewStage />
         </section>

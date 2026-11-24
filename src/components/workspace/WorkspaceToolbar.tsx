@@ -10,9 +10,12 @@ import {
   Keyboard,
   Maximize2,
   Minus,
+  Monitor,
   PanelLeft,
   Plus,
   Scan,
+  Smartphone,
+  Square,
   Terminal,
   FileCode2,
   FileText,
@@ -25,6 +28,9 @@ export const WorkspaceToolbar: React.FC = () => {
     sidebarOpen,
     toggleSidebar,
     fontSize,
+    zoomPercent,
+    minFontSize,
+    maxFontSize,
     zoomOut,
     zoomIn,
     fitAsciiToViewport,
@@ -39,6 +45,7 @@ export const WorkspaceToolbar: React.FC = () => {
     downloadTxt,
     downloadAnsi,
     downloadPng,
+    downloadPoster,
     downloadSvg,
     downloadHtml,
     isRecordingWebm,
@@ -62,21 +69,22 @@ export const WorkspaceToolbar: React.FC = () => {
   }, [exportOpen]);
 
   return (
-    <div className="shrink-0 px-3 py-2 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+    <div className="shrink-0 px-3 py-1.5 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-1.5">
       {/* Left: Panel Toggle, Zoom, Fit, Split, Fullscreen, Shortcuts & Dimensions */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1 shrink-0">
         <button
           type="button"
           onClick={toggleSidebar}
           title="Toggle Inspector Panel (Z)"
-          className={`hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap ${
+          aria-label="Toggle Inspector Panel"
+          className={`hidden md:inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap ${
             sidebarOpen
               ? 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500'
               : 'border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300'
           }`}
         >
           <PanelLeft className="w-3.5 h-3.5" />
-          <span>Inspector</span>
+          <span className="hidden 2xl:inline">Inspector</span>
         </button>
 
         {/* Zoom Stepper */}
@@ -84,19 +92,28 @@ export const WorkspaceToolbar: React.FC = () => {
           <button
             type="button"
             onClick={zoomOut}
+            disabled={fontSize <= minFontSize}
             aria-label="Zoom out"
-            className="px-2 py-1.5 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors"
+            title="Zoom out (-)"
+            className="px-1.5 py-1.5 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors disabled:opacity-35"
           >
             <Minus className="w-3.5 h-3.5" />
           </button>
-          <span className="px-2 text-[11px] font-mono tabular-nums font-medium text-zinc-800 dark:text-zinc-200 min-w-[42px] text-center">
-            {fontSize}px
-          </span>
+          <button
+            type="button"
+            onClick={fitAsciiToViewport}
+            title={`${fontSize}px — Click to Fit (0)`}
+            className="px-1.5 py-1 text-[11px] font-mono tabular-nums font-medium text-zinc-800 dark:text-zinc-200 min-w-[44px] text-center hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors"
+          >
+            {zoomPercent}%
+          </button>
           <button
             type="button"
             onClick={zoomIn}
+            disabled={fontSize >= maxFontSize}
             aria-label="Zoom in"
-            className="px-2 py-1.5 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors"
+            title="Zoom in (+)"
+            className="px-1.5 py-1.5 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors disabled:opacity-35"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
@@ -106,34 +123,34 @@ export const WorkspaceToolbar: React.FC = () => {
           type="button"
           onClick={fitAsciiToViewport}
           title="Fit to Viewport (0)"
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500 transition-colors whitespace-nowrap"
+          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500 transition-colors whitespace-nowrap"
         >
           <Scan className="w-3.5 h-3.5" />
-          <span>Fit</span>
+          <span className="hidden xl:inline">Fit</span>
         </button>
 
         <button
           type="button"
           onClick={toggleCompare}
           title="Toggle Before / After Split Comparison"
-          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap ${
+          className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap ${
             compareActive
               ? 'border-indigo-600 bg-indigo-600 text-white'
               : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500'
           }`}
         >
           <Columns2 className="w-3.5 h-3.5" />
-          <span>Split</span>
+          <span className="hidden xl:inline">Split</span>
         </button>
 
         <button
           type="button"
           onClick={() => toggleFullscreen()}
           title="Fullscreen Presentation (F)"
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500 transition-colors whitespace-nowrap"
+          aria-label="Fullscreen Presentation"
+          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500 transition-colors whitespace-nowrap"
         >
           <Maximize2 className="w-3.5 h-3.5" />
-          <span className="hidden xl:inline">Full</span>
         </button>
 
         <button
@@ -141,23 +158,24 @@ export const WorkspaceToolbar: React.FC = () => {
           onClick={() => setShortcutsModalOpen(true)}
           title="Keyboard Shortcuts (?)"
           aria-label="Keyboard Shortcuts"
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500 transition-colors"
+          className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500 transition-colors"
         >
           <Keyboard className="w-3.5 h-3.5" />
         </button>
 
         {/* Quiet unboxed tabular metadata */}
-        <span className="hidden sm:inline text-xs font-mono tabular-nums text-zinc-500 dark:text-zinc-400 pl-1.5">
+        <span className="hidden lg:inline text-[11px] font-mono tabular-nums text-zinc-500 dark:text-zinc-400 pl-1">
           {gridDims.cols}×{gridDims.rows}
         </span>
       </div>
 
       {/* Right: Copy, Export Menu & Recording */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1 shrink-0">
         <button
           type="button"
           onClick={() => void copyPlain()}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500 transition-colors whitespace-nowrap"
+          title="Copy Plain ASCII"
+          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500 transition-colors whitespace-nowrap"
         >
           <Copy className="w-3.5 h-3.5" />
           <span>Copy</span>
@@ -167,10 +185,10 @@ export const WorkspaceToolbar: React.FC = () => {
           type="button"
           onClick={() => void copyCodeBlock()}
           title="Copy wrapped in code block for WhatsApp/Discord"
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors whitespace-nowrap"
+          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors whitespace-nowrap"
         >
           <Code2 className="w-3.5 h-3.5" />
-          <span>Copy ```</span>
+          <span>```</span>
         </button>
 
         {/* Export Dropdown Menu */}
@@ -178,7 +196,7 @@ export const WorkspaceToolbar: React.FC = () => {
           <button
             type="button"
             onClick={() => setExportOpen((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500 transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-indigo-500 transition-colors whitespace-nowrap"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export</span>
@@ -243,6 +261,43 @@ export const WorkspaceToolbar: React.FC = () => {
                 <span>Standalone Page (.html)</span>
               </button>
               <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
+              <div className="px-3 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                Wallpaper / Poster
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  downloadPoster('story_9_16');
+                  setExportOpen(false);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-left"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Phone / Story (9:16)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  downloadPoster('square_1_1');
+                  setExportOpen(false);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-left"
+              >
+                <Square className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Square Post (1:1)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  downloadPoster('desktop_16_9');
+                  setExportOpen(false);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-left"
+              >
+                <Monitor className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Desktop 4K (16:9)</span>
+              </button>
+              <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
               <button
                 type="button"
                 onClick={() => {
@@ -261,27 +316,27 @@ export const WorkspaceToolbar: React.FC = () => {
         <button
           type="button"
           onClick={toggleWebmRecording}
-          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap ${
+          className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap ${
             isRecordingWebm
               ? 'border-rose-500 bg-rose-600 text-white'
               : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-rose-500'
           }`}
         >
           <Film className="w-3.5 h-3.5" />
-          <span>{isRecordingWebm ? 'Stop Rec' : 'WebM'}</span>
+          <span>{isRecordingWebm ? 'Stop' : 'WebM'}</span>
         </button>
 
         <button
           type="button"
           disabled={isRecordingGif}
           onClick={() => void recordAnimatedGif()}
-          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap disabled:opacity-60 ${
+          className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap disabled:opacity-60 ${
             isRecordingGif
               ? 'border-amber-500 bg-amber-500/15 text-amber-600 dark:text-amber-300'
               : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-amber-500'
           }`}
         >
-          <span>{isRecordingGif ? 'Encoding...' : 'GIF'}</span>
+          <span>{isRecordingGif ? 'GIF...' : 'GIF'}</span>
         </button>
       </div>
     </div>

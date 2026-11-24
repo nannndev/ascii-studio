@@ -3,11 +3,13 @@ import { useStudio } from '../../context/StudioContext';
 import { Modal } from '../ui/Modal';
 
 const SHORTCUTS = [
+  { label: 'Zoom canvas in / out', keys: 'Scroll / Pinch' },
+  { label: 'Pan zoomed canvas', keys: 'Hand Tool / Middle-Drag' },
+  { label: 'Zoom in / out / fit to viewport', keys: '+ / - / 0' },
   { label: 'Fullscreen presentation', keys: 'F' },
   { label: 'Play / Pause animation, flipbook, or audio', keys: 'Space' },
   { label: 'Randomize style (Surprise Me)', keys: 'R' },
   { label: 'Toggle inspector panel (Zen mode)', keys: 'Z' },
-  { label: 'Zoom in / out / fit to viewport', keys: '+ / - / 0' },
   { label: 'Paint undo / redo', keys: 'Ctrl+Z / Ctrl+Y' },
   { label: 'Show / hide shortcuts', keys: '?' },
 ];
